@@ -1,0 +1,15 @@
+begin
+do
+else
+end
+if
+integer
+procedure
+program
+read
+real
+then
+var
+while
+write
+$

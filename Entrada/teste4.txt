@@ -1,0 +1,5 @@
+program programa1
+    begin
+        read(a)
+    end
+.
