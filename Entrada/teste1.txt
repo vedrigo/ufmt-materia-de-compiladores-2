@@ -1,5 +1,5 @@
 program id1
     begin
-        read(a; a)
+        while + a
     end
 .
