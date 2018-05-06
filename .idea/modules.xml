@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/compiladores2.semantico.iml" filepath="$PROJECT_DIR$/.idea/compiladores2.semantico.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../compiladores2.sintatico/.idea/compiladores2.sintatico.iml" filepath="$PROJECT_DIR$/../compiladores2.sintatico/.idea/compiladores2.sintatico.iml" />
     </modules>
   </component>
 </project>

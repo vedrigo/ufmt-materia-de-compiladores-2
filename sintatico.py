@@ -23,22 +23,11 @@ class Sintatico(object):
         else:
             print(Colors().danger, "\n\n########ERRO NO SINTÁTICO########")
             print("\nLinha", self.token[1], "Coluna", self.token[2], "Posição", self.linhaToken)
-            print("\nToken   esperado: \t", self.pilha[-1])
+            if (self.pilha):
+                print("\nToken   esperado: \t", self.pilha[-1])
+            else:
+                print("\nToken esperado: \t Nenhum")
             print("Token encontrado: \t", self.token[0])
-
-
-            # print("\nEsperado / Encontrado")
-            # print("------------------------")
-            # if(self.linhaToken - 1 >= 0):
-            #     print(self.linhaToken-1, ":", "? / ", self.tokens[self.linhaToken - 2][0], Colors().pink )
-            #
-            # print(self.linhaToken, ":", self.pilha.pop(), "/", self.tokens[self.linhaToken - 1][0], Colors().danger)
-            #
-            # if(len(self.pilha) > 2 and self.tokens[self.linhaToken - 1][0] is not None):
-            #     for x in range(2,1,-1):
-            #         self.linhaToken += 1
-            #         print(self.linhaToken, ":", self.pilha.pop(), "/", self.tokens[self.linhaToken - 1][0])
-
 
     def nextToken(self):
         print("função nextToken")
@@ -76,10 +65,8 @@ class Sintatico(object):
                 print("sai da pilha:", self.pilha.pop())
                 self.nextToken()
 
-                self.pilha += ['[ var | procedure | begin ]']
                 if (self.corpo()):
                     self.nextToken()
-                    print("sai da pilha:", self.pilha.pop())
 
                     self.pilha += ['.']
                     if (self.token[token] == '.'):
@@ -95,10 +82,8 @@ class Sintatico(object):
     def corpo(self):
         print("função corpo")
 
-        self.pilha += ['var | procedure |' + chr(955)]
         if (self.dc()):
             self.nextToken()
-            print("sai da pilha:", self.pilha.pop())
 
             self.pilha += ['begin']
             if (self.token[token] == "begin"):
@@ -106,10 +91,8 @@ class Sintatico(object):
                 self.nextToken()
                 print("sai da pilha:", self.pilha.pop())
 
-                self.pilha += ['[ read | write | if | while | Identificador ]']
                 if (self.comandos()):
                     self.nextToken()
-                    print("sai da pilha:", self.pilha.pop())
 
                     self.pilha += ['end']
                     if (self.token[token] == "end"):
@@ -122,28 +105,35 @@ class Sintatico(object):
 
     def dc(self):
         print("função dc")
+        dc_v = self.dc_v()
+        if (dc_v or dc_v == 'Deu ruim'):
+            if ( dc_v == 'Deu ruim'):
+                return False
+            else:
+                self.nextToken()
+                if (self.mais_dc()):
+                    return True
 
-        if (self.dc_v()):
-            self.nextToken()
+                return False
 
-            if (self.mais_dc()):
+        elif (not dc_v):
+            dc_p = self.dc_p()
+            if (dc_p or dc_p == 'Deu ruim'):
+
+                if (dc_p == 'Deu ruim'):
+                    return False
+                else:
+                    self.nextToken()
+                    if (self.mais_dc()):
+                        return True
+
+                    return False
+
+            elif (' '):
+                print("dc passou em branco")
+                print("encontrado", Colors().blue, chr(955), Colors().reset)
+                self.prevToken()
                 return True
-
-            return False
-
-        elif (self.dc_p()):
-            self.nextToken()
-
-            if (self.mais_dc()):
-                return True
-
-            return False
-
-        elif (' '):
-            print("dc passou em branco")
-            print("encontrado", Colors().blue, chr(955), Colors().reset)
-            self.prevToken()
-            return True
 
     def mais_dc(self):
         print("função mais_dc")
@@ -166,13 +156,10 @@ class Sintatico(object):
 
         if (self.token[token] == "var"):
             print("encontrado", Colors().blue, " var", Colors().reset)
-            print("sai da pilha:", self.pilha.pop())
             self.nextToken()
 
-            self.pilha += ['Identificador']
             if (self.variaveis()):
                 self.nextToken()
-                print("sai da pilha:", self.pilha.pop())
 
                 self.pilha += [':']
                 if (self.token[token] == ':'):
@@ -180,10 +167,9 @@ class Sintatico(object):
                     print("sai da pilha:", self.pilha.pop())
                     self.nextToken()
 
-                    self.pilha += ['[ real | integer ]']
                     if (self.tipo_var()):
-                        print("sai da pilha:", self.pilha.pop())
                         return True
+            return 'Deu ruim'
 
         print(Colors().warning, "não é dc_v", Colors().reset)
         return False
@@ -191,12 +177,15 @@ class Sintatico(object):
     def tipo_var(self):
         print("função tipo_var")
 
+        self.pilha += ['[ real | integer ]']
         if (self.token[token] == "real"):
             print("encontrado", Colors().blue, " real", Colors().reset)
+            self.pilha.pop()
             return True
 
         elif (self.token[token] == "integer"):
             print("encontrado", Colors().blue, " integer", Colors().reset)
+            self.pilha.pop()
             return True
 
         print(Colors().warning, "não é tipo_var", Colors().reset)
@@ -205,15 +194,13 @@ class Sintatico(object):
     def variaveis(self):
         print("função variaveis")
 
-        self.pilha += ['Identificador']
+        self.pilha += ['Variaveis ex: a, b']
         if (self.token[tipo] == "Identificador"):
             print("encontrado", Colors().blue, self.token[token], Colors().reset)
             self.nextToken()
             print("sai da pilha:", self.pilha.pop())
 
-            self.pilha += [', |' + chr(955)]
             if (self.mais_var()):
-                print("sai da pilha:", self.pilha.pop())
                 return True
 
         print(Colors().warning, "não é variaveis", Colors().reset)
@@ -239,11 +226,10 @@ class Sintatico(object):
         print("função dc_p")
 
         if (self.token[token] == "procedure"):
-            self.pilha += ['CORPO_P', 'PARAMETROS', 'ident']
             print("encontrado", Colors().blue, " procedure", Colors().reset)
             self.nextToken()
-            print("sai da pilha:", self.pilha.pop())
 
+            self.pilha += ['ident']
             if (self.token[tipo] == "Identificador"):
                 print("encontrado", Colors().blue, self.token[token], Colors().reset)
                 self.nextToken()
@@ -251,11 +237,10 @@ class Sintatico(object):
 
                 if (self.parametros()):
                     self.nextToken()
-                    print("sai da pilha:", self.pilha.pop())
 
                     if (self.corpo()):
-                        print("sai da pilha:", self.pilha.pop())
                         return True
+            return 'Deu ruim'
 
         print(Colors().warning, "não é dc_p", Colors().reset)
         return False
@@ -270,8 +255,10 @@ class Sintatico(object):
             if (self.lista_par()):
                 self.nextToken()
 
+                self.pilha += [')']
                 if (self.token[token] == ')'):
                     print("encontrado", Colors().blue, " )", Colors().reset)
+                    self.pilha.pop()
                     return True
 
             return False
@@ -284,12 +271,11 @@ class Sintatico(object):
 
     def lista_par(self):
         print("função lista_par")
-        self.pilha += ['MAIS_PAR', 'TIPO_VAR', ':', 'VARIAVEIS']
 
         if (self.variaveis()):
             self.nextToken()
-            print("sai da pilha:", self.pilha.pop())
 
+            self.pilha += [':']
             if (self.token[token] == ':'):
                 print("encontrado", Colors().blue, " : ", Colors().reset)
                 print("sai da pilha:", self.pilha.pop())
@@ -297,10 +283,8 @@ class Sintatico(object):
 
                 if (self.tipo_var()):
                     self.nextToken()
-                    print("sai da pilha:", self.pilha.pop())
 
                     if (self.mais_par()):
-                        print("sai da pilha:", self.pilha.pop())
                         return True
 
         print(Colors().warning, "não é lista_par", Colors().reset)
@@ -326,12 +310,11 @@ class Sintatico(object):
 
     def corpo_p(self):
         print("função corpo_p")
-        self.pilha += ['end', 'COMANDOS', 'begin', 'DC_LOC']
 
         if (self.dc_loc()):
             self.nextToken()
-            print("sai da pilha:", self.pilha.pop())
 
+            self.pilha += ['begin']
             if (self.token[token] == "begin"):
                 print("encontrado", Colors().blue, " begin", Colors().reset)
                 print("sai da pilha:", self.pilha.pop())
@@ -339,8 +322,8 @@ class Sintatico(object):
 
                 if (self.comandos()):
                     self.nextToken()
-                    print("sai da pilha:", self.pilha.pop())
 
+                    self.pilha += 'end'
                     if (self.token[token] == "end"):
                         print("encontrado", Colors().blue, " end", Colors().reset)
                         print("sai da pilha:", self.pilha.pop())
@@ -391,12 +374,11 @@ class Sintatico(object):
         if (self.token[token] == '('):
             print("encontrado", Colors().blue, " ( ", Colors().reset)
             self.nextToken()
-            self.pilha += [')', 'ARGUMENTOS']
 
             if (self.argumentos()):
-                print("sai da pilha:", self.pilha.pop())
                 self.nextToken()
 
+                self.pilha += [')']
                 if (self.token[token] == ')'):
                     print("encontrado", Colors().blue, " ( ", Colors().reset)
                     print("sai da pilha:", self.pilha.pop())
@@ -412,15 +394,12 @@ class Sintatico(object):
 
     def argumentos(self):
         print("função argumentos")
-        self.pilha += ['MAIS_IDENT', 'ident']
 
         if (self.token[tipo] == 'Identificador'):
             print("encontrado", Colors().blue, self.token[token], Colors().reset)
             self.nextToken()
-            print("sai da pilha:", self.pilha.pop())
 
             if (self.mais_ident()):
-                print("sai da pilha:", self.pilha.pop())
                 return True
 
         return False
@@ -431,10 +410,8 @@ class Sintatico(object):
         if (self.token[token] == ';'):
             print("encontrado", Colors().blue, " ; ", Colors().reset)
             self.nextToken()
-            self.pilha += ['ARGUMENTOS']
 
             if (self.argumentos()):
-                print("sai da pilha:", self.pilha.pop())
                 return True
 
             return False
@@ -451,10 +428,8 @@ class Sintatico(object):
         if (self.token[token] == "else"):
             print("encontrado", Colors().blue, " else", Colors().reset)
             self.nextToken()
-            self.pilha += ['COMANDOS']
 
             if (self.comandos()):
-                print("sai da pilha:", self.pilha.pop())
                 return True
             return False
 
@@ -466,14 +441,11 @@ class Sintatico(object):
 
     def comandos(self):
         print("função comandos")
-        self.pilha += ['[ ;' + chr(955) + ']', '[ read | write | if | while | Identificador ]']
 
         if (self.comando()):
             self.nextToken()
-            print("sai da pilha:", self.pilha.pop())
 
             if (self.mais_comandos()):
-                print("sai da pilha:", self.pilha.pop())
                 return True
 
         return False
@@ -484,10 +456,8 @@ class Sintatico(object):
         if (self.token[token] == ';'):
             print("encontrado", Colors().blue, " ; ", Colors().reset)
             self.nextToken()
-            self.pilha += ['COMANDOS']
 
             if (self.comandos()):
-                print("sai da pilha:", self.pilha.pop())
                 return True
 
             return False
@@ -500,9 +470,11 @@ class Sintatico(object):
 
     def comando(self):
         print("função comando")
+        self.pilha += ['Comando: [ read | write | if | while | Identificador ]']
 
         if (self.token[token] == "read"):
             print("encontrado", Colors().blue, " read", Colors().reset)
+            self.pilha.pop()
             self.nextToken()
 
             self.pilha += ['(']
@@ -525,17 +497,18 @@ class Sintatico(object):
         elif (self.token[token] == "write"):
             print("encontrado", Colors().blue, " write", Colors().reset)
             self.nextToken()
-            self.pilha += [')', 'VARIAVEIS', '(']
+            self.pilha.pop()
 
+            self.pilha += ['(']
             if (self.token[token] == "("):
                 print("encontrado", Colors().blue, " (", Colors().reset)
                 print("sai da pilha:", self.pilha.pop())
                 self.nextToken()
 
                 if (self.variaveis()):
-                    print("sai da pilha:", self.pilha.pop())
                     self.nextToken()
 
+                    self.pilha += [')']
                     if (self.token[token] == ")"):
                         print("encontrado", Colors().blue, " )", Colors().reset)
                         print("sai da pilha:", self.pilha.pop())
@@ -544,34 +517,35 @@ class Sintatico(object):
         elif (self.token[token] == "while"):
             print("encontrado", Colors().blue, " while", Colors().reset)
             self.nextToken()
-            self.pilha += ['$', 'COMANDOS', 'do', 'CONDICAO']
+            self.pilha.pop()
 
             if (self.condicao()):
                 self.nextToken()
-                print("sai da pilha:", self.pilha.pop())
 
+                self.pilha += ['do']
                 if (self.token[token] == "do"):
                     print("encontrado", Colors().blue, " do", Colors().reset)
                     print("sai da pilha:", self.pilha.pop())
                     self.nextToken()
 
                     if (self.comandos()):
-                        print("sai da pilha:", self.pilha.pop())
                         self.nextToken()
 
+                        self.pilha += ['$']
                         if (self.token[token] == '$'):
                             print("encontrado", Colors().blue, " $", Colors().reset)
                             print("sai da pilha:", self.pilha.pop())
                             return True
 
         elif (self.token[token] == "if"):
+            print("encontrado", Colors().blue, " if", Colors().reset)
             self.nextToken()
-            self.pilha += ['$', 'PFALSA', 'COMANDOS', 'the', 'CONDICAO']
+            self.pilha.pop()
 
             if (self.condicao()):
                 self.nextToken()
-                print("sai da pilha:", self.pilha.pop())
 
+                self.pilha += ['then']
                 if (self.token[token] == "then"):
                     print("encontrado", Colors().blue, " then", Colors().reset)
                     self.nextToken()
@@ -579,12 +553,11 @@ class Sintatico(object):
 
                     if (self.comando()):
                         self.nextToken()
-                        print("sai da pilha:", self.pilha.pop())
 
                         if (self.pfalsa()):
                             self.nextToken()
-                            print("sai da pilha:", self.pilha.pop())
 
+                            self.pilha += ['$']
                             if (self.token[token] == '$'):
                                 print("encontrado", Colors().blue, " $", Colors().reset)
                                 print("sai da pilha:", self.pilha.pop())
@@ -593,10 +566,9 @@ class Sintatico(object):
         elif (self.token[tipo] == "Identificador"):
             print("encontrado", Colors().blue, self.token[token], Colors().reset)
             self.nextToken()
-            self.pilha += ['RESTOIDENT']
+            self.pilha.pop()
 
             if (self.restoident()):
-                print("sai da pilha:", self.pilha.pop())
                 return True
 
         print(Colors().warning, "não é comando", Colors().reset)
@@ -608,10 +580,8 @@ class Sintatico(object):
         if (self.token[token] == ":="):
             print("encontrado", Colors().blue, " :=", Colors().reset)
             self.nextToken()
-            self.pilha += ['EXPRESSAO']
 
             if (self.expressao()):
-                print("sai da pilha:", self.pilha.pop())
                 return True
 
         elif (self.lista_arg()):
@@ -622,18 +592,14 @@ class Sintatico(object):
 
     def condicao(self):
         print("função condicao")
-        self.pilha += ['EXPRESSAO', 'RELACAO', 'EXPRESSAO']
 
         if (self.expressao()):
             self.nextToken()
-            print("sai da pilha:", self.pilha.pop())
 
             if (self.relacao()):
                 self.nextToken()
-                print("sai da pilha:", self.pilha.pop())
 
                 if (self.expressao()):
-                    print("sai da pilha:", self.pilha.pop())
                     return True
 
         print(Colors().warning, "não é condicao", Colors().reset)
@@ -667,15 +633,18 @@ class Sintatico(object):
             return True
 
         print(Colors().warning, "não é relacao", Colors().reset)
+        self.pilha += ['Relação: [ = | <> | >= | <= | > | < ]']
         return False
 
     def expressao(self):
         print("função expressao")
 
+        self.pilha += ['Expressao ex: a + b * (c - a)']
         if (self.termo()):
             self.nextToken()
 
             if (self.outros_termos()):
+                self.pilha.pop()
                 return True
 
         print(Colors().warning, "não é expressao", Colors().reset)
@@ -706,7 +675,7 @@ class Sintatico(object):
 
             if (self.termo()):
                 self.nextToken()
-
+                print('termo de outros_termos passou')
                 if (self.outros_termos()):
                     return True
 
@@ -744,7 +713,6 @@ class Sintatico(object):
                 if (self.mais_fatores()):
                     return True
 
-        self.pilha += ['Termo: Exemplo a + b']
         print(Colors().warning, "não é termo", Colors().reset)
         return False
 
@@ -799,12 +767,11 @@ class Sintatico(object):
         elif (self.token[token] == '('):
             print("encontrado", Colors().blue, " (", Colors().reset)
             self.nextToken()
-            self.pilha += [')', 'EXPRESSAO']
 
             if (self.expressao()):
                 self.nextToken()
-                print("sai da pilha:", self.pilha.pop())
 
+                self.pilha += [')']
                 if (self.token[token] == ')'):
                     print("encontrado", Colors().blue, " )", Colors().reset)
                     print("sai da pilha:", self.pilha.pop())
