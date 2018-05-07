@@ -2,7 +2,8 @@ import sys
 from pprint import pprint
 from sintatico import Sintatico
 from lexico import Lexico
+from semantico import Semantico
 
-Sintatico(
-    Lexico('Entrada/teste1.txt').lista_de_tokens
-)
+tokens = Lexico('Entrada/teste1.txt').lista_de_tokens
+if (Sintatico( tokens ).resultado):
+    Semantico( tokens )

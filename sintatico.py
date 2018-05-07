@@ -14,12 +14,14 @@ class Sintatico(object):
     linhaToken = 0
     msg = ""
     pilha = list()
+    resultado = False
 
     def __init__(self, tokens_de_entrada):
         self.tokens = tokens_de_entrada
 
         if (self.programa()):
             print(Colors().sucess, "\n########SINTÁICO COM SUCESSO!!!##########\n", Colors().reset)
+            self.resultado = True
         else:
             print(Colors().danger, "\n\n########ERRO NO SINTÁTICO########")
             print("\nLinha", self.token[1], "Coluna", self.token[2], "Posição", self.linhaToken)
@@ -28,6 +30,7 @@ class Sintatico(object):
             else:
                 print("\nToken esperado: \t Nenhum")
             print("Token encontrado: \t", self.token[0])
+            self.resultado = False
 
     def nextToken(self):
         print("função nextToken")
