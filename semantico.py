@@ -15,10 +15,11 @@ class Semantico(object):
     pilha = list()
     escopo = list()
     pilha_execucao = list()
-    sinaliza = False
     semente = 0
     tabela = list()
     msg = ''
+    sinaliza_tipo = False
+    sinaliza_inserir = False
 
     def __init__(self, tokens_de_entrada):
         self.tokens = tokens_de_entrada
@@ -33,108 +34,127 @@ class Semantico(object):
             print("\n\nTabela de simbolos:")
             for x in range(len(self.tabela)):
                 print(x, self.tabela[x])
+
+            print("\nPilha de erros:")
+            for x in range(len(self.pilha)):
+                print(x, self.pilha[x])
             print(Colors().danger, "\n\n########ERRO NO SEMÂNTICO########")
-            print("\nLinha", self.token[1], "Coluna", self.token[2], "Posição", self.linhaToken)
+            print(self.pilha[-1])
             print(self.msg)
 
     def programa(self):
-        ##print("função programa")
         self.nextToken()
 
-        self.pilha += ['program']
         if (self.token[token] == "program"):
-            ##print("encontrado", Colors().blue, "program", Colors().reset)
-            ##print("sai da pilha:", self.pilha.pop())
             self.semente += 1
             self.escopo.append([self.semente, 'estrito'])
             self.nextToken()
 
-            self.pilha += ['Identificador']
             if (self.token[tipo] == "Identificador"):
-                ##print("encontrado", Colors().blue, self.token[token], Colors().reset)
-                ##print("sai da pilha:", self.pilha.pop())
+                print('Iniciado inserir em: program > ident')
+                self.pilha += ['Erro ao inserir o token: ' + str(self.token)]
                 if(self.inserir([self.token[token], self.escopo, 'program', ''], True)):
-
+                    self.pilha.pop()
+                    print('Terminado de inserir em: program > ident\n')
                     self.nextToken()
                     if (self.corpo()):
                         self.nextToken()
 
-                        self.pilha += ['.']
                         if (self.token[token] == '.'):
-                            ##print("encontrado", Colors().blue, " .", Colors().reset)
-                            ##print("sai da pilha:", self.pilha.pop())
                             self.escopo.pop()
                             return True
 
-        ##print(Colors().warning, "não é programa", Colors().reset)
-        ##self.printPilha()
         return False
 
     #simbolo, escopo([semente, tipo]), tipo, valor
     def buscar(self, linha):
+        print('    abrindo função buscar')
         lista = list()
+        flag = False
 
         for x in self.pilha_execucao:
-            if(x[0] == linha):
-                lista.append(x)
+            if(x[0] == linha[0]):
+                if(flag):
+                    print('      encontrado correspondência em for da pilha')
+                    lista.append(x)
+                else:
+                    flag = True
 
         for x in self.tabela:
             if(x[0] == linha[0]):
+                print('      encontrado correspondência em for da tabela')
                 lista.append(x)
+
         c_linha = copy.deepcopy(linha)
-        for x in range(len(c_linha[1])):
+        # for faz do tamanha da pilha de escopo menos 1 até chegar na raiz
+        for x in range(len(c_linha[1])-1):
+            #c_linha na ultima posição de escopo em tipo
             if(c_linha[1][-1][1] == 'livre'):
-                if(c_linha in lista):
-                    print('achou na tabela o id!')
-                    return True
-                else:
-                    if(c_linha[1][-1][0] != '0'):
-                        print('antes do pop:', c_linha[1])
-                        c_linha[1].pop()
-                        print('depois do pop:', c_linha[1])
-                    else:
-                        return False
+                for y in lista:
+                    if(c_linha[1] == y[1]):
+                        print(Colors().blue, '    achou', Colors().reset, c_linha, 'já existe na tabela de simbolos!')
+                        self.msg = 'Token ' + c_linha[0] + ' já declarada!'
+                        print('    fechando função buscar e retornando true')
+                        return True
+                print('      antes do pop:', c_linha[1])
+                c_linha[1].pop()
+                print('      depois do pop:', c_linha[1])
             else:
-                if (linha in lista):
-                    print(Colors().blue, 'achou', Colors().reset, 'id na tabela de simbolos!')
-                    return True
-                else:
-                    print(' id ainda', Colors().blue, 'nao existe!', Colors().reset)
-                    return False
+                for y in lista:
+                    if (c_linha[1] == y[1]):
+                        print(Colors().blue, '    achou', Colors().reset, c_linha, 'já existe na tabela de simbolos!')
+                        self.msg = 'Token ' + c_linha[0] + ' já declarada!'
+                        print('    fechando função buscar e retornando true')
+                        return True
+
+                print('      id ainda', Colors().blue, 'nao existe!', Colors().reset)
+                print('    fechando função buscar e retornando false')
+
+            return False
+
 
     def inserir(self, linha, tabela):
+        print('  abrindo função inserir')
         if(tabela):
+            print('    destino: tabela')
             if(self.buscar(linha)):
-                print(Colors().danger, 'erro', Colors().reset, 'id',linha, 'já existe na',Colors().danger, 'tabela de simbolos', Colors().reset)
-                self.msg = 'Token ' + self.token[token] + ' já declarada!'
+                print(Colors().danger, '   erro', Colors().reset, 'id',linha, 'já existe na',Colors().danger, 'tabela de simbolos', Colors().reset)
+                print('  fechando função inserir e retornando falso')
                 return False
             else:
-                print(Colors().sucess, 'sucesso', Colors().reset, 'id',linha, 'inserido na', Colors().sucess, 'tabela de simbolos', Colors().reset)
-                print('ultimo da tabela:', self.tabela)
                 self.tabela.append(copy.deepcopy(linha))
-                print('ultimo da tabela depois do append:', self.tabela[-1])
+                print(Colors().sucess, '   sucesso', Colors().reset,linha, 'inserido na', Colors().sucess, 'tabela de simbolos', Colors().reset)
+                print('    ultimo item tabela:', self.tabela[-1])
+                print('  fechando função inserir e retornando true')
+
                 return True
         else:
+            print('    destino:pilha de execução')
             if (self.buscar(linha)):
                 print(Colors().danger, 'erro', Colors().reset, 'id', linha, 'já existe na pilha de exucução')
-                self.msg = 'Token ' + self.token[token] + ' já declarada!'
+                print('  fechando função inserir e retornando falso')
                 return False
             else:
-                print(Colors().sucess, 'sucesso', Colors().reset, 'id', linha, 'inserido na', Colors().blue, 'pilha de execução', Colors().reset)
-                self.pilha_execucao.append(linha)
+                self.pilha_execucao.append(copy.deepcopy(linha))
+                print(Colors().sucess, '   sucesso', Colors().reset, linha, 'inserido na', Colors().blue, 'pilha de execução', Colors().reset)
+                print('    ultimo item pilha:', self.pilha_execucao[-1])
+                print('  fechando função inserir e retornando true')
                 return True
 
     def aplicarTipo(self, tipo):
         for x in self.pilha_execucao:
             x[2] = tipo
+            print('Iniciado inserir em: aplicarTipo')
             if(not self.inserir(x, True)):
+                self.pilha += ['erro ao inserir os tokens da linha: '+str(self.token[linha])]
                 self.msg += '\nerro em aplicarTipo'
                 return False
+            print('Terminado inserir em: aplicarTipo\n')
         self.pilha_execucao.clear()
         return True
 
     def comparar(self, tipo):
-        if(tipo != self.sinaliza):
+        if(tipo != self.sinaliza_tipo:
             return False
         return True
 
@@ -146,7 +166,6 @@ class Semantico(object):
             self.nextToken()
 
     def prevToken(self):
-        ##print("função prevToken")
         self.linhaToken -= 1
         self.token = self.tokens[self.linhaToken]
 
@@ -158,34 +177,25 @@ class Semantico(object):
             print(Colors().sucess, "pilha vazia", Colors.reset)
 
     def corpo(self):
-        ##print("função corpo")
 
         if (self.dc()):
             self.nextToken()
 
-            self.pilha += ['begin']
             if (self.token[token] == "begin"):
-                ##print("encontrado", Colors().blue, " begin", Colors().reset)
                 self.nextToken()
                 self.semente += 1
                 self.escopo.append([self.semente, 'livre'])
-                ##print("sai da pilha:", self.pilha.pop())
 
                 if (self.comandos()):
                     self.escopo.pop()
                     self.nextToken()
 
-                    self.pilha += ['end']
                     if (self.token[token] == "end"):
-                        ##print("encontrado", Colors().blue, " end", Colors().reset)
-                        ##print("sai da pilha:", self.pilha.pop())
                         return True
 
-        ##print(Colors().warning, "não é corpo", Colors().reset)
         return False
 
     def dc(self):
-        ##print("função dc")
         dc_v = self.dc_v()
         if (dc_v or dc_v == 'Deu ruim'):
             if ( dc_v == 'Deu ruim'):
@@ -211,90 +221,74 @@ class Semantico(object):
                     return False
 
             elif (' '):
-                ##print("dc passou em branco")
-                ##print("encontrado", Colors().blue, chr(955), Colors().reset)
                 self.prevToken()
                 return True
 
     def mais_dc(self):
-        ##print("função mais_dc")
 
         if (self.token[token] == ';'):
-            ##print("encontrado", Colors().blue, " ;", Colors().reset)
             self.nextToken()
             if (self.dc()):
                 return True
             return False
 
         elif (' '):
-            ##print(Colors().warning, "não é mais_dc", Colors().reset)
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def dc_v(self):
-        ##print("função dc_v")
 
         if (self.token[token] == "var"):
-            ##print("encontrado", Colors().blue, " var", Colors().reset)
             self.pilha_execucao.clear()
             self.nextToken()
 
+            self.sinaliza_inserir = True
             if (self.variaveis()):
+                self.sinaliza_inserir = False
                 self.nextToken()
 
-                self.pilha += [':']
                 if (self.token[token] == ':'):
-                    ##print("encontrado", Colors().blue, " :", Colors().reset)
-                    ##print("sai da pilha:", self.pilha.pop())
                     self.nextToken()
 
                     if (self.tipo_var()):
                         return True
             return 'Deu ruim'
 
-        ##print(Colors().warning, "não é dc_v", Colors().reset)
         return False
 
     def tipo_var(self):
-        ##print("função tipo_var")
 
-        self.pilha += ['[ real | integer ]']
         if (self.token[token] == "real"):
-            ##print("encontrado", Colors().blue, " real", Colors().reset)
-            self.pilha.pop()
             if(self.aplicarTipo('real')):
                 return True
 
         elif (self.token[token] == "integer"):
-            ##print("encontrado", Colors().blue, " integer", Colors().reset)
-            self.pilha.pop()
             if(self.aplicarTipo('integer')):
                 return True
 
-        ##print(Colors().warning, "não é tipo_var", Colors().reset)
         return False
 
     def variaveis(self):
-        ##print("função variaveis")
 
-        self.pilha += ['Variaveis ex: a, b']
         if (self.token[tipo] == "Identificador"):
-            ##print("encontrado", Colors().blue, self.token[token], Colors().reset)
-            if(self.inserir([self.token[token], self.escopo, 'ident', ''], False)):
+            if (self.sinaliza_inserir):
+                print('Iniciado inserir em: variaveis > ident')
+                self.pilha += ['erro ao inserir o token: '+ str(self.token)]
+                if(self.inserir([self.token[token], self.escopo, 'ident', ''], False)):
+                    self.pilha.pop()
+                    print('Terminado inserir em: variaveis > ident\n')
+                    self.nextToken()
+                    if (self.mais_var()):
+                        return True
+            else:
                 self.nextToken()
-                ##print("sai da pilha:", self.pilha.pop())
-
                 if (self.mais_var()):
                     return True
 
-        ##print(Colors().warning, "não é variaveis", Colors().reset)
         return False
 
     def mais_var(self):
-        ##print("função mais_var")
         if (self.token[token] == ','):
-            ##print("encontrado", Colors().blue, " ,", Colors().reset)
             self.nextToken()
 
             if (self.variaveis()):
@@ -302,68 +296,59 @@ class Semantico(object):
             return False
 
         elif (' '):
-            ##print("mais_var passou em branco")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def dc_p(self):
-        ##print("função dc_p")
 
         if (self.token[token] == "procedure"):
-            ##print("encontrado", Colors().blue, " procedure", Colors().reset)
+            self.semente += 1
+            self.escopo.append([self.semente, 'estrito'])
             self.nextToken()
 
-            self.pilha += ['ident']
             if (self.token[tipo] == "Identificador"):
-                ##print("encontrado", Colors().blue, self.token[token], Colors().reset)
-                self.nextToken()
-                ##print("sai da pilha:", self.pilha.pop())
-
-                if (self.parametros()):
+                print('Iniciado inserir em procedure > ident')
+                self.pilha += ['erro ao inserir o token:' + str(self.token)]
+                if(self.inserir([self.token[token], self.escopo, 'procedure', ''], True)):
+                    self.pilha.pop()
+                    print('Finalizado inserir em procedure > ident\n')
                     self.nextToken()
 
-                    if (self.corpo()):
-                        return True
+                    if (self.parametros()):
+                        self.nextToken()
+
+                        if (self.corpo()):
+                            self.escopo.pop()
+                            return True
             return 'Deu ruim'
 
-        ##print(Colors().warning, "não é dc_p", Colors().reset)
         return False
 
     def parametros(self):
-        ##print("função parametros")
 
         if (self.token[token] == '('):
-            ##print("encontrado", Colors().blue, " ( ", Colors().reset)
             self.nextToken()
 
             if (self.lista_par()):
                 self.nextToken()
 
-                self.pilha += [')']
                 if (self.token[token] == ')'):
-                    ##print("encontrado", Colors().blue, " )", Colors().reset)
-                    self.pilha.pop()
                     return True
 
             return False
 
         elif (' '):
-            ##print("parametros passou em branco")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def lista_par(self):
-        ##print("função lista_par")
 
+        self.sinaliza_inserir = True
         if (self.variaveis()):
+            self.sinaliza_inserir = False
             self.nextToken()
 
-            self.pilha += [':']
             if (self.token[token] == ':'):
-                ##print("encontrado", Colors().blue, " : ", Colors().reset)
-                ##print("sai da pilha:", self.pilha.pop())
                 self.nextToken()
 
                 if (self.tipo_var()):
@@ -372,14 +357,11 @@ class Semantico(object):
                     if (self.mais_par()):
                         return True
 
-        ##print(Colors().warning, "não é lista_par", Colors().reset)
         return False
 
     def mais_par(self):
-        ##print("função mais_par")
 
         if (self.token[token] == ';'):
-            ##print("encontrado", Colors().blue, " ; ", Colors().reset)
             self.nextToken()
 
             if (self.lista_par()):
@@ -388,37 +370,26 @@ class Semantico(object):
             return False
 
         elif (' '):
-            ##print("mais_par passou em branco")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def corpo_p(self):
-        ##print("função corpo_p")
 
         if (self.dc_loc()):
             self.nextToken()
 
-            self.pilha += ['begin']
             if (self.token[token] == "begin"):
-                ##print("encontrado", Colors().blue, " begin", Colors().reset)
-                ##print("sai da pilha:", self.pilha.pop())
                 self.nextToken()
 
                 if (self.comandos()):
                     self.nextToken()
 
-                    self.pilha += 'end'
                     if (self.token[token] == "end"):
-                        ##print("encontrado", Colors().blue, " end", Colors().reset)
-                        ##print("sai da pilha:", self.pilha.pop())
                         return True
 
-        ##print(Colors().warning, "não é corpo_p", Colors().reset)
         return False
 
     def dc_loc(self):
-        ##print("função dc_loc")
 
         if (self.dc_v()):
             self.nextToken()
@@ -429,71 +400,56 @@ class Semantico(object):
             return False
 
         elif (' '):
-            ##print("dc_loc passou em branco")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             return True
 
     def mais_dcloc(self):
-        ##print("função mais_dcloc")
 
         if (self.token[token] == ';'):
-            ##print("encontrado", Colors().blue, " ; ", Colors().reset)
             self.nextToken()
-            self.pilha += ['DC_LOC']
 
             if (self.dc_loc()):
-                ##print("sai da pilha:", self.pilha.pop())
                 return True
 
             return False
 
         elif (' '):
-            ##print("mais_dcloc passou em branco")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def lista_arg(self):
-        ##print("função lista_arg")
 
         if (self.token[token] == '('):
-            ##print("encontrado", Colors().blue, " ( ", Colors().reset)
             self.nextToken()
 
             if (self.argumentos()):
                 self.nextToken()
 
-                self.pilha += [')']
                 if (self.token[token] == ')'):
-                    ##print("encontrado", Colors().blue, " ( ", Colors().reset)
-                    ##print("sai da pilha:", self.pilha.pop())
                     return True
 
             return False
 
         elif (' '):
-            ##print("lista_arg")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def argumentos(self):
-        ##print("função argumentos")
 
         if (self.token[tipo] == 'Identificador'):
-            ##print("encontrado", Colors().blue, self.token[token], Colors().reset)
-            self.nextToken()
-
-            if (self.mais_ident()):
-                return True
+            print('Iniciado buscar em argumentos > ident')
+            self.pilha += ['erro ao buscar o token: ' + str(self.token)]
+            if(self.buscar([self.token[token], self.escopo, 'ident', ''])):
+                self.pilha.pop()
+                print('Terminado buscar em argumentos > ident\n')
+                self.nextToken()
+                if (self.mais_ident()):
+                    return True
 
         return False
 
     def mais_ident(self):
-        ##print("função mais_ident")
 
         if (self.token[token] == ';'):
-            ##print("encontrado", Colors().blue, " ; ", Colors().reset)
             self.nextToken()
 
             if (self.argumentos()):
@@ -502,16 +458,12 @@ class Semantico(object):
             return False
 
         elif (' '):
-            ##print("mais_ident passou em branco")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def pfalsa(self):
-        ##print("função pfalsa")
 
         if (self.token[token] == "else"):
-            ##print("encontrado", Colors().blue, " else", Colors().reset)
             self.nextToken()
 
             if (self.comandos()):
@@ -519,13 +471,10 @@ class Semantico(object):
             return False
 
         elif (' '):
-            ##print("pfalsa passou em branco")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def comandos(self):
-        ##print("função comandos")
 
         if (self.comando()):
             self.nextToken()
@@ -536,10 +485,8 @@ class Semantico(object):
         return False
 
     def mais_comandos(self):
-        ##print("função mais_comandos")
 
         if (self.token[token] == ';'):
-            ##print("encontrado", Colors().blue, " ; ", Colors().reset)
             self.nextToken()
 
             if (self.comandos()):
@@ -548,93 +495,58 @@ class Semantico(object):
             return False
 
         elif (' '):
-            ##print("mais_comandos passou em branco")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def comando(self):
-        ##print("função comando")
-        self.pilha += ['Comando: [ read | write | if | while | Identificador ]']
 
         if (self.token[token] == "read"):
-            ##print("encontrado", Colors().blue, " read", Colors().reset)
-            self.pilha.pop()
             self.nextToken()
 
-            self.pilha += ['(']
             if (self.token[token] == "("):
-                ##print("encontrado", Colors().blue, " (", Colors().reset)
-                ##print("sai da pilha:", self.pilha.pop())
                 self.nextToken()
 
-                self.pilha += ['VARIAVEIS']
                 if (self.variaveis()):
-                    ##print("sai da pilha:", self.pilha.pop())
                     self.nextToken()
 
-                    self.pilha += ['[ ) | , ]']
                     if (self.token[token] == ")"):
-                        ##print("encontrado", Colors().blue, " )", Colors().reset)
-                        ##print("sai da pilha:", self.pilha.pop())
                         return True
 
         elif (self.token[token] == "write"):
-            ##print("encontrado", Colors().blue, " write", Colors().reset)
             self.nextToken()
-            self.pilha.pop()
 
-            self.pilha += ['(']
             if (self.token[token] == "("):
-                ##print("encontrado", Colors().blue, " (", Colors().reset)
-                ##print("sai da pilha:", self.pilha.pop())
                 self.nextToken()
 
                 if (self.variaveis()):
                     self.nextToken()
 
-                    self.pilha += [')']
                     if (self.token[token] == ")"):
-                        ##print("encontrado", Colors().blue, " )", Colors().reset)
-                        ##print("sai da pilha:", self.pilha.pop())
                         return True
 
         elif (self.token[token] == "while"):
-            ##print("encontrado", Colors().blue, " while", Colors().reset)
             self.nextToken()
-            self.pilha.pop()
 
             if (self.condicao()):
                 self.nextToken()
 
-                self.pilha += ['do']
                 if (self.token[token] == "do"):
-                    ##print("encontrado", Colors().blue, " do", Colors().reset)
-                    ##print("sai da pilha:", self.pilha.pop())
                     self.nextToken()
 
                     if (self.comandos()):
                         self.nextToken()
 
-                        self.pilha += ['$']
                         if (self.token[token] == '$'):
-                            ##print("encontrado", Colors().blue, " $", Colors().reset)
-                            ##print("sai da pilha:", self.pilha.pop())
                             return True
 
         elif (self.token[token] == "if"):
-            ##print("encontrado", Colors().blue, " if", Colors().reset)
             self.nextToken()
-            self.pilha.pop()
 
             if (self.condicao()):
                 self.nextToken()
 
-                self.pilha += ['then']
                 if (self.token[token] == "then"):
-                    ##print("encontrado", Colors().blue, " then", Colors().reset)
                     self.nextToken()
-                    ##print("sai da pilha:", self.pilha.pop())
 
                     if (self.comando()):
                         self.nextToken()
@@ -642,28 +554,20 @@ class Semantico(object):
                         if (self.pfalsa()):
                             self.nextToken()
 
-                            self.pilha += ['$']
                             if (self.token[token] == '$'):
-                                ##print("encontrado", Colors().blue, " $", Colors().reset)
-                                ##print("sai da pilha:", self.pilha.pop())
                                 return True
 
         elif (self.token[tipo] == "Identificador"):
-            ##print("encontrado", Colors().blue, self.token[token], Colors().reset)
             self.nextToken()
-            self.pilha.pop()
 
             if (self.restoident()):
                 return True
 
-        ##print(Colors().warning, "não é comando", Colors().reset)
         return False
 
     def restoident(self):
-        ##print("função restoident")
 
         if (self.token[token] == ":="):
-            ##print("encontrado", Colors().blue, " :=", Colors().reset)
             self.nextToken()
 
             if (self.expressao()):
@@ -672,11 +576,9 @@ class Semantico(object):
         elif (self.lista_arg()):
             return True
 
-        ##print(Colors().warning, "não é restoident", Colors().reset)
         return False
 
     def condicao(self):
-        ##print("função condicao")
 
         if (self.expressao()):
             self.nextToken()
@@ -687,107 +589,79 @@ class Semantico(object):
                 if (self.expressao()):
                     return True
 
-        ##print(Colors().warning, "não é condicao", Colors().reset)
         return False
 
     def relacao(self):
-        ##print("função relacao")
 
         if (self.token[token] == '='):
-            ##print("encontrado", Colors().blue, " =", Colors().reset)
             return True
 
         elif (self.token[token] == "<>"):
-            ##print("encontrado", Colors().blue, " <>", Colors().reset)
             return True
 
         elif (self.token[token] == ">="):
-            ##print("encontrado", Colors().blue, " >=", Colors().reset)
             return True
 
         elif (self.token[token] == "<="):
-            ##print("encontrado", Colors().blue, " <=", Colors().reset)
             return True
 
         elif (self.token[token] == '>'):
-            ##print("encontrado", Colors().blue, " >", Colors().reset)
             return True
 
         elif (self.token[token] == '<'):
-            ##print("encontrado", Colors().blue, " <", Colors().reset)
             return True
 
-        ##print(Colors().warning, "não é relacao", Colors().reset)
-        self.pilha += ['Relação: [ = | <> | >= | <= | > | < ]']
         return False
 
     def expressao(self):
-        ##print("função expressao")
 
-        self.pilha += ['Expressao ex: a + b * (c - a)']
         if (self.termo()):
             self.nextToken()
 
             if (self.outros_termos()):
-                self.pilha.pop()
                 return True
 
-        ##print(Colors().warning, "não é expressao", Colors().reset)
         return False
 
     def op_un(self):
-        ##print("função relacao")
 
         if (self.token[token] == '+'):
-            ##print("encontrado", Colors().blue, " +", Colors().reset)
             return True
 
         elif (self.token[token] == '-'):
-            ##print("encontrado", Colors().blue, " -", Colors().reset)
             return True
 
         elif (' '):
-            ##print("op_un passou em branco")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def outros_termos(self):
-        ##print("função outros_termos")
 
         if (self.op_ad()):
             self.nextToken()
 
             if (self.termo()):
                 self.nextToken()
-                ##print('termo de outros_termos passou')
                 if (self.outros_termos()):
                     return True
 
             return False
 
         elif (' '):
-            ##print("outros_termos passou em branco")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def op_ad(self):
-        ##print("função op_ad")
 
         if (self.token[token] == '+'):
-            ##print("encontrado", Colors().blue, " +", Colors().reset)
             return True
 
         elif (self.token[token] == '-'):
-            ##print("encontrado", Colors().blue, " -", Colors().reset)
             return True
 
-        ##print(Colors().warning, "não é op_ad", Colors().reset)
         return False
 
     def termo(self):
-        ##print("função termo")
 
         if (self.op_un()):
             self.nextToken()
@@ -798,11 +672,9 @@ class Semantico(object):
                 if (self.mais_fatores()):
                     return True
 
-        ##print(Colors().warning, "não é termo", Colors().reset)
         return False
 
     def mais_fatores(self):
-        ##print("função mais_fatores")
 
         if (self.op_mul()):
             self.nextToken()
@@ -815,52 +687,37 @@ class Semantico(object):
             return False
 
         elif (' '):
-            ##print("mais_fatores passou em branco")
-            ##print("encontrado", Colors().blue, chr(955), Colors().reset)
             self.prevToken()
             return True
 
     def op_mul(self):
-        ##print("função op_mul")
 
         if (self.token[token] == '*'):
-            ##print("encontrado", Colors().blue, " *", Colors().reset)
             return True
 
         elif (self.token[token] == '/'):
-            ##print("encontrado", Colors().blue, " /", Colors().reset)
             return True
 
-        ##print(Colors().warning, "não é op_mul", Colors().reset)
         return False
 
     def fator(self):
-        ##print("função fator")
 
         if (self.token[tipo] == "Identificador"):
-            ##print("encontrado", Colors().blue, self.token[token], Colors().reset)
             return True
 
         elif (self.token[tipo] == "Numero inteiro"):
-            ##print("encontrado", Colors().blue, " Numero inteiro", Colors().reset)
             return True
 
         elif (self.token[tipo] == "Numero de ponto flutuante"):
-            ##print("encontrado", Colors().blue, " Numero de ponto flutuante", Colors().reset)
             return True
 
         elif (self.token[token] == '('):
-            ##print("encontrado", Colors().blue, " (", Colors().reset)
             self.nextToken()
 
             if (self.expressao()):
                 self.nextToken()
 
-                self.pilha += [')']
                 if (self.token[token] == ')'):
-                    ##print("encontrado", Colors().blue, " )", Colors().reset)
-                    ##print("sai da pilha:", self.pilha.pop())
                     return True
 
-        ##print(Colors().warning, "não é fator", Colors().reset)
         return False

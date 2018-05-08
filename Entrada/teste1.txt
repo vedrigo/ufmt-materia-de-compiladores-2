@@ -1,13 +1,13 @@
 program id1
     var a : real;
-    procedure id2 (c : real)
+    procedure id2 (b : integer)
         begin
             while a = b do
                 write(a)
             $
         end
     ;
-    var a : integer
+    var c : integer
     begin
         if a <> b then
             b
