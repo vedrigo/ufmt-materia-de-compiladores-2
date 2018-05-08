@@ -1,5 +1,5 @@
 from colors import Colors
-import sys
+import sys, copy
 
 # atributos dos tokens
 token = 0
@@ -30,6 +30,9 @@ class Semantico(object):
                 print(x, self.tabela[x])
             print(Colors().sucess, "\n########SEMÂNTICO COM SUCESSO!!!##########\n", Colors().reset)
         else:
+            print("\n\nTabela de simbolos:")
+            for x in range(len(self.tabela)):
+                print(x, self.tabela[x])
             print(Colors().danger, "\n\n########ERRO NO SEMÂNTICO########")
             print("\nLinha", self.token[1], "Coluna", self.token[2], "Posição", self.linhaToken)
             print(self.msg)
@@ -50,7 +53,7 @@ class Semantico(object):
             if (self.token[tipo] == "Identificador"):
                 ##print("encontrado", Colors().blue, self.token[token], Colors().reset)
                 ##print("sai da pilha:", self.pilha.pop())
-                if(self.inserir([self.token[token], self.escopo, 'program', ''], self.tabela)):
+                if(self.inserir([self.token[token], self.escopo, 'program', ''], True)):
 
                     self.nextToken()
                     if (self.corpo()):
@@ -64,25 +67,35 @@ class Semantico(object):
                             return True
 
         ##print(Colors().warning, "não é programa", Colors().reset)
-        self.printPilha()
+        ##self.printPilha()
         return False
 
     #simbolo, escopo([semente, tipo]), tipo, valor
-    def buscar(self, ident):
-        idents = list()
+    def buscar(self, linha):
+        lista = list()
+
+        for x in self.pilha_execucao:
+            if(x[0] == linha):
+                lista.append(x)
+
         for x in self.tabela:
-            if(x[0] == ident[0]):
-                idents.append(x)
-        id = ident.copy()
-        for x in range(len(id[1])):
-            if(id[1][-1][1] == 'livre'):
-                if(id in idents):
+            if(x[0] == linha[0]):
+                lista.append(x)
+        c_linha = copy.deepcopy(linha)
+        for x in range(len(c_linha[1])):
+            if(c_linha[1][-1][1] == 'livre'):
+                if(c_linha in lista):
                     print('achou na tabela o id!')
                     return True
                 else:
-                    id[1].pop()
+                    if(c_linha[1][-1][0] != '0'):
+                        print('antes do pop:', c_linha[1])
+                        c_linha[1].pop()
+                        print('depois do pop:', c_linha[1])
+                    else:
+                        return False
             else:
-                if (id in idents):
+                if (linha in lista):
                     print(Colors().blue, 'achou', Colors().reset, 'id na tabela de simbolos!')
                     return True
                 else:
@@ -90,21 +103,34 @@ class Semantico(object):
                     return False
 
     def inserir(self, linha, tabela):
-        if(self.buscar(linha)):
-            print(Colors().danger, 'erro', Colors().reset, 'id já existe na tabela de simbolos')
-            self.msg = 'Token ' + self.token[token] + ' já declarada!'
-            return False
+        if(tabela):
+            if(self.buscar(linha)):
+                print(Colors().danger, 'erro', Colors().reset, 'id',linha, 'já existe na',Colors().danger, 'tabela de simbolos', Colors().reset)
+                self.msg = 'Token ' + self.token[token] + ' já declarada!'
+                return False
+            else:
+                print(Colors().sucess, 'sucesso', Colors().reset, 'id',linha, 'inserido na', Colors().sucess, 'tabela de simbolos', Colors().reset)
+                print('ultimo da tabela:', self.tabela)
+                self.tabela.append(copy.deepcopy(linha))
+                print('ultimo da tabela depois do append:', self.tabela[-1])
+                return True
         else:
-            print(Colors().sucess, 'sucesso', Colors().reset, 'id inserido na tabela de simbolos')
-            tabela.append(linha)
-            return True
+            if (self.buscar(linha)):
+                print(Colors().danger, 'erro', Colors().reset, 'id', linha, 'já existe na pilha de exucução')
+                self.msg = 'Token ' + self.token[token] + ' já declarada!'
+                return False
+            else:
+                print(Colors().sucess, 'sucesso', Colors().reset, 'id', linha, 'inserido na', Colors().blue, 'pilha de execução', Colors().reset)
+                self.pilha_execucao.append(linha)
+                return True
 
     def aplicarTipo(self, tipo):
         for x in self.pilha_execucao:
             x[2] = tipo
-            if(not self.inserir(x, self.tabela)):
+            if(not self.inserir(x, True)):
                 self.msg += '\nerro em aplicarTipo'
                 return False
+        self.pilha_execucao.clear()
         return True
 
     def comparar(self, tipo):
@@ -140,9 +166,9 @@ class Semantico(object):
             self.pilha += ['begin']
             if (self.token[token] == "begin"):
                 ##print("encontrado", Colors().blue, " begin", Colors().reset)
+                self.nextToken()
                 self.semente += 1
                 self.escopo.append([self.semente, 'livre'])
-                self.nextToken()
                 ##print("sai da pilha:", self.pilha.pop())
 
                 if (self.comandos()):
@@ -255,7 +281,7 @@ class Semantico(object):
         self.pilha += ['Variaveis ex: a, b']
         if (self.token[tipo] == "Identificador"):
             ##print("encontrado", Colors().blue, self.token[token], Colors().reset)
-            if(self.inserir([self.token[token], self.escopo, 'ident', ''], self.pilha_execucao)):
+            if(self.inserir([self.token[token], self.escopo, 'ident', ''], False)):
                 self.nextToken()
                 ##print("sai da pilha:", self.pilha.pop())
 
