@@ -20,6 +20,7 @@ class Semantico(object):
     msg = ''
     sinaliza_tipo = False
     sinaliza_inserir = False
+    ultimo_token_buscado = []
 
     def __init__(self, tokens_de_entrada):
         self.tokens = tokens_de_entrada
@@ -69,6 +70,7 @@ class Semantico(object):
     #simbolo, escopo([semente, tipo]), tipo, valor
     def buscar(self, linha):
         print('    abrindo função buscar')
+        print('      buscando:', linha)
         lista = list()
         flag = False
 
@@ -84,6 +86,9 @@ class Semantico(object):
             if(x[0] == linha[0]):
                 print('      encontrado correspondência em for da tabela')
                 lista.append(x)
+        print('      itens para veificar:')
+        for x in lista:
+            print('        ', x)
 
         c_linha = copy.deepcopy(linha)
         # for faz do tamanha da pilha de escopo menos 1 até chegar na raiz
@@ -92,8 +97,10 @@ class Semantico(object):
             if(c_linha[1][-1][1] == 'livre'):
                 for y in lista:
                     if(c_linha[1] == y[1]):
-                        print(Colors().blue, '    achou', Colors().reset, c_linha, 'já existe na tabela de simbolos!')
+                        print(Colors().blue, '     achou', Colors().reset, c_linha, 'já existe na tabela de simbolos!')
                         self.msg = 'Token ' + c_linha[0] + ' já declarada!'
+                        self.ultimo_token_buscado = y
+                        print('      ultimo token buscado:', self.ultimo_token_buscado)
                         print('    fechando função buscar e retornando true')
                         return True
                 print('      antes do pop:', c_linha[1])
@@ -102,15 +109,17 @@ class Semantico(object):
             else:
                 for y in lista:
                     if (c_linha[1] == y[1]):
-                        print(Colors().blue, '    achou', Colors().reset, c_linha, 'já existe na tabela de simbolos!')
+                        print(Colors().blue, '     achou', Colors().reset, c_linha, 'já existe na tabela de simbolos!')
                         self.msg = 'Token ' + c_linha[0] + ' já declarada!'
+                        self.ultimo_token_buscado = y
+                        print('      ultimo token buscado:', self.ultimo_token_buscado)
                         print('    fechando função buscar e retornando true')
                         return True
 
                 print('      id ainda', Colors().blue, 'nao existe!', Colors().reset)
                 print('    fechando função buscar e retornando false')
 
-            return False
+        return False
 
 
     def inserir(self, linha, tabela):
@@ -154,8 +163,18 @@ class Semantico(object):
         return True
 
     def comparar(self, tipo):
-        if(tipo != self.sinaliza_tipo:
+        print('  abrindo função comparar')
+        print('    ultimo buscado:', tipo)
+        print('    sinalizatipo:', self.sinaliza_tipo)
+        if(not self.sinaliza_tipo):
+            self.sinaliza_tipo = copy.deepcopy(tipo)
+            print('  fechando função comparar, add sinaliza_tipo e retornando true')
+            return True
+        elif(tipo[2] != self.sinaliza_tipo[2]):
+            print('  fechando função comparar e retornando falso')
+            self.msg = 'operação com tipos diferentes'
             return False
+        print('  fechando função comparar e retornando true')
         return True
 
     def nextToken(self):
@@ -525,6 +544,8 @@ class Semantico(object):
                         return True
 
         elif (self.token[token] == "while"):
+            self.semente += 1
+            self.escopo.append([self.semente, 'livre'])
             self.nextToken()
 
             if (self.condicao()):
@@ -537,9 +558,12 @@ class Semantico(object):
                         self.nextToken()
 
                         if (self.token[token] == '$'):
+                            self.escopo.pop()
                             return True
 
         elif (self.token[token] == "if"):
+            self.semente += 1
+            self.escopo.append([self.semente, 'livre'])
             self.nextToken()
 
             if (self.condicao()):
@@ -555,13 +579,23 @@ class Semantico(object):
                             self.nextToken()
 
                             if (self.token[token] == '$'):
+                                self.escopo.pop()
                                 return True
 
         elif (self.token[tipo] == "Identificador"):
-            self.nextToken()
+            print('Iniciado buscar em comando > ident')
+            self.pilha += ['erro ao buscar o token: ' + str(self.token)]
+            if (self.buscar([self.token[token], self.escopo, 'ident', ''])):
+                self.pilha.pop()
+                print('Terminado buscar em comando > ident\n')
+                self.nextToken()
 
-            if (self.restoident()):
-                return True
+                self.sinaliza_tipo = copy.deepcopy(self.ultimo_token_buscado)
+                print('Sinaliza Tipo:', self.sinaliza_tipo,'\n')
+                if (self.restoident()):
+                    self.sinaliza_tipo = False
+                    print('Sinaliza Tipo:', self.sinaliza_tipo, '\n')
+                    return True
 
         return False
 
@@ -587,6 +621,7 @@ class Semantico(object):
                 self.nextToken()
 
                 if (self.expressao()):
+                    self.sinaliza_tipo = False
                     return True
 
         return False
@@ -703,13 +738,33 @@ class Semantico(object):
     def fator(self):
 
         if (self.token[tipo] == "Identificador"):
-            return True
+            print('Iniciado buscar em fator > ident')
+            self.pilha += ['erro ao buscar o token:'+str(self.token)]
+            if(self.buscar([self.token[token], self.escopo, 'ident', ''])):
+                self.pilha.pop()
+                print('Terminado buscar em fator > ident\n')
+                print('Iniciado comparar em fator > ident')
+                self.pilha += ['erro ao comparar o token:'+str(self.token)]
+                if(self.comparar(self.ultimo_token_buscado)):
+                    self.pilha.pop()
+                    print('Terminado buscar em fator > ident\n')
+                    return True
 
         elif (self.token[tipo] == "Numero inteiro"):
-            return True
+            print('Iniciado comparar em fator > Numero inteiro')
+            self.pilha += ['erro ao comparar o token:' + str(self.token)]
+            if (self.comparar(self.ultimo_token_buscado)):
+                self.pilha.pop()
+                print('Terminado buscar em fator > Numero inteiro\n')
+                return True
 
         elif (self.token[tipo] == "Numero de ponto flutuante"):
-            return True
+            print('Iniciado comparar em fator > Numero de ponto flutuante')
+            self.pilha += ['erro ao comparar o token:' + str(self.token)]
+            if (self.comparar(self.ultimo_token_buscado)):
+                self.pilha.pop()
+                print('Terminado buscar em fator > Numero de ponto flutuante\n')
+                return True
 
         elif (self.token[token] == '('):
             self.nextToken()
