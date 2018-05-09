@@ -101,6 +101,9 @@ class Semantico(object):
                         self.msg = 'Token ' + c_linha[0] + ' já declarada!'
                         self.ultimo_token_buscado = y
                         print('      ultimo token buscado:', self.ultimo_token_buscado)
+                        if(not self.sinaliza_tipo):
+                            self.sinaliza_tipo = y
+                            print('      alterando sinaliza tipo para:', self.sinaliza_tipo)
                         print('    fechando função buscar e retornando true')
                         return True
                 print('      antes do pop:', c_linha[1])
@@ -113,6 +116,9 @@ class Semantico(object):
                         self.msg = 'Token ' + c_linha[0] + ' já declarada!'
                         self.ultimo_token_buscado = y
                         print('      ultimo token buscado:', self.ultimo_token_buscado)
+                        if (not self.sinaliza_tipo):
+                            self.sinaliza_tipo = y
+                            print('      alterando sinaliza tipo para:', self.sinaliza_tipo)
                         print('    fechando função buscar e retornando true')
                         return True
 
@@ -321,8 +327,6 @@ class Semantico(object):
     def dc_p(self):
 
         if (self.token[token] == "procedure"):
-            self.semente += 1
-            self.escopo.append([self.semente, 'estrito'])
             self.nextToken()
 
             if (self.token[tipo] == "Identificador"):
@@ -331,6 +335,9 @@ class Semantico(object):
                 if(self.inserir([self.token[token], self.escopo, 'procedure', ''], True)):
                     self.pilha.pop()
                     print('Finalizado inserir em procedure > ident\n')
+
+                    self.semente += 1
+                    self.escopo.append([self.semente, 'estrito'])
                     self.nextToken()
 
                     if (self.parametros()):
@@ -457,14 +464,16 @@ class Semantico(object):
         if (self.token[tipo] == 'Identificador'):
             print('Iniciado buscar em argumentos > ident')
             self.pilha += ['erro ao buscar o token: ' + str(self.token)]
+            self.msg = 'Token ' + str(self.token[token]) + ' ainda não foi declarado!'
             if(self.buscar([self.token[token], self.escopo, 'ident', ''])):
                 self.pilha.pop()
                 print('Terminado buscar em argumentos > ident\n')
                 self.nextToken()
                 if (self.mais_ident()):
                     return True
-
-        return False
+        elif( ' ' ):
+            self.prevToken()
+            return True
 
     def mais_ident(self):
 
@@ -518,6 +527,10 @@ class Semantico(object):
             return True
 
     def comando(self):
+
+        print('Sinaliza tipo antes:', self.sinaliza_tipo)
+        self.sinaliza_tipo = False
+        print('Sinaliza tipo depois:', self.sinaliza_tipo, '\n')
 
         if (self.token[token] == "read"):
             self.nextToken()
@@ -585,17 +598,29 @@ class Semantico(object):
         elif (self.token[tipo] == "Identificador"):
             print('Iniciado buscar em comando > ident')
             self.pilha += ['erro ao buscar o token: ' + str(self.token)]
+            self.msg = 'Token '+str(self.token[token])+' ainda não foi declarado!'
             if (self.buscar([self.token[token], self.escopo, 'ident', ''])):
                 self.pilha.pop()
                 print('Terminado buscar em comando > ident\n')
-                self.nextToken()
-
-                self.sinaliza_tipo = copy.deepcopy(self.ultimo_token_buscado)
-                print('Sinaliza Tipo:', self.sinaliza_tipo,'\n')
-                if (self.restoident()):
-                    self.sinaliza_tipo = False
-                    print('Sinaliza Tipo:', self.sinaliza_tipo, '\n')
-                    return True
+                if( self.ultimo_token_buscado[2] == 'procedure'):
+                    self.nextToken()
+                    self.pilha += ['Esperado: (\nEncontrado: '+str(self.token)]
+                    self.msg = 'Chamada de Procedimento'
+                    if(self.token[token] == "("):
+                        self.pilha.pop()
+                        self.nextToken()
+                        self.pilha += ['parâmetros não passados']
+                        if ( self.argumentos()):
+                            self.pilha.pop()
+                            self.nextToken()
+                            self.pilha += ['Esperado: )\nEncontrado: ' + str(self.token)]
+                            if(self.token[token] == ")"):
+                                self.pilha.pop()
+                                return True
+                else:
+                    self.nextToken()
+                    if (self.restoident()):
+                        return True
 
         return False
 
@@ -621,7 +646,6 @@ class Semantico(object):
                 self.nextToken()
 
                 if (self.expressao()):
-                    self.sinaliza_tipo = False
                     return True
 
         return False
@@ -740,6 +764,7 @@ class Semantico(object):
         if (self.token[tipo] == "Identificador"):
             print('Iniciado buscar em fator > ident')
             self.pilha += ['erro ao buscar o token:'+str(self.token)]
+            self.msg = 'Token ' + str(self.token[token]) + ' ainda não foi declarado!'
             if(self.buscar([self.token[token], self.escopo, 'ident', ''])):
                 self.pilha.pop()
                 print('Terminado buscar em fator > ident\n')
@@ -753,7 +778,7 @@ class Semantico(object):
         elif (self.token[tipo] == "Numero inteiro"):
             print('Iniciado comparar em fator > Numero inteiro')
             self.pilha += ['erro ao comparar o token:' + str(self.token)]
-            if (self.comparar(self.ultimo_token_buscado)):
+            if (self.comparar([self.token[token], self.escopo, 'integer', self.token[token]])):
                 self.pilha.pop()
                 print('Terminado buscar em fator > Numero inteiro\n')
                 return True
@@ -761,7 +786,7 @@ class Semantico(object):
         elif (self.token[tipo] == "Numero de ponto flutuante"):
             print('Iniciado comparar em fator > Numero de ponto flutuante')
             self.pilha += ['erro ao comparar o token:' + str(self.token)]
-            if (self.comparar(self.ultimo_token_buscado)):
+            if (self.comparar([self.token[token], self.escopo, 'real', self.token[token]])):
                 self.pilha.pop()
                 print('Terminado buscar em fator > Numero de ponto flutuante\n')
                 return True

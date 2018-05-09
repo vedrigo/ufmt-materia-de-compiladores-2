@@ -1,6 +1,6 @@
 program id1
     var a : real;
-    procedure id2 (b : integer)
+    procedure id2 (b : integer; x : real)
         var a : integer
         begin
             while a = b do
@@ -11,7 +11,8 @@ program id1
     ;
     var c : integer
     begin
-        if a <> c then
+        id2(a);
+        if 1 <> c then
             a
         $
     end

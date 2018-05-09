@@ -398,14 +398,18 @@ class Sintatico(object):
     def argumentos(self):
         print("função argumentos")
 
+        self.pilha += ['identificador']
         if (self.token[tipo] == 'Identificador'):
+            self.pilha.pop()
             print("encontrado", Colors().blue, self.token[token], Colors().reset)
             self.nextToken()
 
             if (self.mais_ident()):
                 return True
 
-        return False
+        elif (' '):
+            self.prevToken()
+            return True
 
     def mais_ident(self):
         print("função mais_ident")
