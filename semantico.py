@@ -1,5 +1,6 @@
 from colors import Colors
-import sys, copy
+import sys, copy, pprint
+
 
 # atributos dos tokens
 token = 0
@@ -7,6 +8,12 @@ linha = 1
 coluna = 2
 tipo = 3
 
+def dd(objeto = -999.999):
+        if(objeto == -999.999):
+            print ("Finalizando programa")
+            sys.exit()
+        pprint.pprint(objeto)
+        sys.exit()
 
 class Semantico(object):
     token = list()
@@ -20,6 +27,8 @@ class Semantico(object):
     msg = ''
     sinaliza_tipo = False
     sinaliza_inserir = False
+    sinaliza_procedimento = None
+    sequencia_parametros = []
     ultimo_token_buscado = []
 
     def __init__(self, tokens_de_entrada):
@@ -127,6 +136,11 @@ class Semantico(object):
 
         return False
 
+    def buscar2(self, nome):
+        for x in self.tabela:
+            if(x[0] == nome):
+                return x
+        return False
 
     def inserir(self, linha, tabela):
         print('  abrindo função inserir')
@@ -140,6 +154,15 @@ class Semantico(object):
                 self.tabela.append(copy.deepcopy(linha))
                 print(Colors().sucess, '   sucesso', Colors().reset,linha, 'inserido na', Colors().sucess, 'tabela de simbolos', Colors().reset)
                 print('    ultimo item tabela:', self.tabela[-1])
+                 #verifica se é sinaliza procedimento
+                if(self.sinaliza_procedimento is not None):
+                    print('Sinaliza procedimento retornou Verdadeiro')
+                    #busca na tabela de simbolos o sinaliza procedimento
+                    x = self.buscar2(self.sinaliza_procedimento)
+                    #recupera tabela de simbolos os tipos dos sinaliza procedimento e concateno o novo atual
+                    #atualiza tabela de simbolos  
+                    x[2] += ',' + linha[2]
+                    print('Atualizado tabela de simbolos para', x)
                 print('  fechando função inserir e retornando true')
 
                 return True
@@ -152,14 +175,14 @@ class Semantico(object):
             else:
                 self.pilha_execucao.append(copy.deepcopy(linha))
                 print(Colors().sucess, '   sucesso', Colors().reset, linha, 'inserido na', Colors().blue, 'pilha de execução', Colors().reset)
-                print('    ultimo item pilha:', self.pilha_execucao[-1])
+                print('    ultimo item pilha:', self.pilha_execucao[-1])               
                 print('  fechando função inserir e retornando true')
                 return True
 
     def aplicarTipo(self, tipo):
         for x in self.pilha_execucao:
-            x[2] = tipo
             print('Iniciado inserir em: aplicarTipo')
+            x[2] = tipo
             if(not self.inserir(x, True)):
                 self.pilha += ['erro ao inserir os tokens da linha: '+str(self.token[linha])]
                 self.msg += '\nerro em aplicarTipo'
@@ -338,11 +361,12 @@ class Semantico(object):
 
                     self.semente += 1
                     self.escopo.append([self.semente, 'estrito'])
+                    self.sinaliza_procedimento = self.token[token]
                     self.nextToken()
 
                     if (self.parametros()):
                         self.nextToken()
-
+                        self.sinaliza_procedimento = None
                         if (self.corpo()):
                             self.escopo.pop()
                             return True
@@ -447,8 +471,13 @@ class Semantico(object):
         if (self.token[token] == '('):
             self.nextToken()
 
+            if (self.ultimo_token_buscado[2].startswith('procedure')):
+                self.sequencia_parametros = self.ultimo_token_buscado[2].split(',')
+                self.sequencia_parametros.pop(0)
+
             if (self.argumentos()):
                 self.nextToken()
+                self.sequencia_parametros.clear
 
                 if (self.token[token] == ')'):
                     return True
@@ -461,7 +490,23 @@ class Semantico(object):
 
     def argumentos(self):
 
-        if (self.token[tipo] == 'Identificador'):
+        if(self.sequencia_parametros != [] ):
+            if (self.token[tipo] == 'Identificador'):
+                print('Iniciado buscar em argumentos > ident')
+                self.pilha += ['erro ao buscar o token: ' + str(self.token)]
+                self.msg = 'Token ' + str(self.token[token]) + ' ainda não foi declarado!'
+                if(self.buscar([self.token[token], self.escopo, 'ident', ''])):
+                    self.pilha.pop()
+                    print('Terminado buscar em argumentos > ident\n')
+                    if(self.ultimo_token_buscado[2] == self.sequencia_parametros.pop(0)):
+                        print('ok,', self.ultimo_token_buscado[2], 'na sequencia certa')
+                        self.nextToken()
+                        if (self.mais_ident()):
+                            return True
+            
+            dd('Erro na linha ' + str(self.token[1]) + ' Parametro do procedimento incorreto')
+
+        elif (self.token[tipo] == 'Identificador'):
             print('Iniciado buscar em argumentos > ident')
             self.pilha += ['erro ao buscar o token: ' + str(self.token)]
             self.msg = 'Token ' + str(self.token[token]) + ' ainda não foi declarado!'
@@ -484,7 +529,8 @@ class Semantico(object):
                 return True
 
             return False
-
+        elif(self.sequencia_parametros != [] ):
+            dd('Erro na linha ' + str(self.token[1]) + ' Parametro do procedimento faltando')
         elif (' '):
             self.prevToken()
             return True

@@ -1,6 +1,6 @@
 program id1
     var a : real;
-    procedure id2 (b : integer; x : real)
+    procedure id2 (b, c : integer; x : real)
         var a : integer
         begin
             while a = b do
@@ -9,12 +9,13 @@ program id1
             $
         end
     ;
-    var c : integer
+    var c, b : integer
     begin
-        id2(a);
+        id2(b; b; a);
         if 1 <> c then
-            a
+            a := 3.0
         $
+        
     end
 
 .
