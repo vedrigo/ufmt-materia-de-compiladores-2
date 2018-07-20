@@ -11,11 +11,12 @@ program id1
     ;
     var c, b : integer
     begin
+        a := a + 2.5;
         id2(b; b; a);
         if 1 <> c then
             a := 3.0
-        $
-        
+        $;
+        write(a, b, c);
+        read(b)
     end
-
 .

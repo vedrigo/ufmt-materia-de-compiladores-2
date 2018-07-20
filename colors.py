@@ -1,4 +1,6 @@
 import platform
+
+
 class Colors:
     if (platform.system() == 'Windows'):
         pink = ''
