@@ -1,4 +1,6 @@
-import re, sys
+import re
+import sys
+
 
 class bcolors:
     HEADER = '\033[95m'
@@ -16,6 +18,7 @@ class bcolors:
         self.FAIL = ''
         self.ENDC = ''
 
+
 class Lexico(object):
 
     coluna = 0
@@ -32,70 +35,70 @@ class Lexico(object):
             print("Arquivo fonte vazio.")
         else:
             while True:
-                print("Loop principal...")
+                #print("Loop principal...")
                 if self.caracter == "":
-                    print("fim de arquivo")
+                    #print("fim de arquivo")
                     break
-                ## Letra
+                # Letra
                 elif re.match("[a-z]|[A-Z]", self.caracter) is not None:
                     self.q1()
-                ## Digito
+                # Digito
                 elif re.match("\d", self.caracter) is not None:
                     self.q2()
-                ## Comentário barra ou divisão
+                # Comentário barra ou divisão
                 elif re.match("\/", self.caracter) is not None:
                     self.q3()
-                ## Comentário chaves
+                # Comentário chaves
                 elif self.caracter == '{':
                     self.q4()
-                ## Fim do programa
+                # Fim do programa
                 elif re.match("\.", self.caracter):
                     self.q5()
-                ## Espaços e tabulações
+                # Espaços e tabulações
                 elif self.caracter in [' ', '\t']:
                     self.q7()
-                ## Quebra de linhas
+                # Quebra de linhas
                 elif self.caracter == '\n':
                     self.q8()
-                ## Simbolos
+                # Simbolos
                 elif re.match("\(|\)|\*|\+|\-|\:|\<|\>|\,|\w|\=|\;", self.caracter) is not None:
                     self.q9()
-                ## Fim de Bloco
+                # Fim de Bloco
                 elif self.caracter == '$':
                     self.q10()
-                ## erro
+                # erro
                 else:
                     self.q6()
 
-        print("\n\n")
+        print("\n####LEXICO COM SUCESSO!!!#####\n")
+        print('Lista de Tokens:')
         for x in range(len(self.lista_de_tokens)):
-            print(x+1, ":", self.lista_de_tokens[x])
-        print(bcolors.OKGREEN, "\n########LEXICO COM SUCESSO!!!##########\n\n", bcolors.ENDC)
+            print(x, ":", self.lista_de_tokens[x])
 
-    ## Transforma as linhas de um arquivo em uma lista
+    # Transforma as linhas de um arquivo em uma lista
     def archiveToList(self, path):
-        print("função archiveToList")
+        #print("função archiveToList")
         fonte = open(path, 'r')
         lista = fonte.readlines()
         for i in range(len(lista)):
             lista[i] = lista[i].replace('\n', '')
         return lista
 
-    ## Erro Função Principal
+    # Erro Função Principal
     def error(self, text):
         print(bcolors.FAIL, "\n*****ERRO NA LINHA", self.linha, "COLUNA", self.coluna, "*****")
         print(text, bcolors.ENDC)
         sys.exit()
 
-    ## Atenção
+    # Atenção
     def warning(self, text):
         '''Imprime os alertas'''
         print(bcolors.WARNING, text, bcolors.ENDC)
 
-    ## Letra
+    # Letra
     def q1(self):
         '''Letra'''
-        print("função q1")
+        #print("função q1")
         token = self.caracter
         while True:
             self.caracter = self.arquivo_fonte.read(1)
@@ -111,10 +114,10 @@ class Lexico(object):
             else:
                 self.error()
 
-    ## Digito
+    # Digito
     def q2(self):
         '''Digito'''
-        print("função q2")
+        #print("função q2")
         token = self.caracter
         flag = False
         flag2 = False
@@ -142,7 +145,7 @@ class Lexico(object):
     # Comentário barra ou divisão
     def q3(self):
         '''Descrição: Comentário barra ou divisão'''
-        print("função q3")
+        #print("função q3")
         token = ''
         token += self.caracter
         self.caracter = self.arquivo_fonte.read(1)
@@ -171,10 +174,10 @@ class Lexico(object):
         else:
             self.error('Esperado ou o simbolo de * de comentário ou um numeral ou um identificador')
 
-    ## Comentário chaves
+    # Comentário chaves
     def q4(self):
         '''Comentário chaves'''
-        print("função q4")
+        #print("função q4")
         token = ''
         while True:
             token += self.caracter
@@ -191,11 +194,10 @@ class Lexico(object):
                 self.error('Esperado o simbolo fechamento de comentário }')
         self.lista_de_tokens.append([token, self.linha, self.coluna, "Comentário"])
 
-    ## Fim do Programa
+    # Fim do Programa
     def q5(self):
         '''Fim do Programa'''
-        print("função q5")
-        token = self.caracter
+        #print("função q5")
         self.caracter = self.arquivo_fonte.read(1)
         self.coluna += 1
         if self.caracter != '':
@@ -203,29 +205,29 @@ class Lexico(object):
 
         self.lista_de_tokens.append(['.', self.linha, self.coluna, "Palavra Reservada"])
 
-    ## Erro simbolo inexistente
+    # Erro simbolo inexistente
     def q6(self):
         self.error('Simbolo não existe na linguagem')
 
-    ## Espaços e tabulações
+    # Espaços e tabulações
     def q7(self):
-        print("função q7")
+        #print("função q7")
         while self.caracter in [' ', '\t']:
             self.caracter = self.arquivo_fonte.read(1)
             self.coluna += 1
 
-    ## Quebra de linhas
+    # Quebra de linhas
     def q8(self):
-        print("função q8")
+        #print("função q8")
         self.coluna = 1
         while self.caracter == '\n':
             self.caracter = self.arquivo_fonte.read(1)
             self.linha += 1
 
-    ## Simbolos
+    # Simbolos
     def q9(self):
         token = ''
-        print("função q9")
+        #print("função q9")
         token += self.caracter
         self.caracter = self.arquivo_fonte.read(1)
         self.coluna += 1
@@ -237,10 +239,10 @@ class Lexico(object):
         else:
             self.lista_de_tokens.append([token, self.linha, self.coluna, "Simbolo simples"])
 
-    ## Fim do Bloco
+    # Fim do Bloco
     def q10(self):
         '''Fim do Bloco'''
-        print("função q10")
+        #print("função q10")
         self.lista_de_tokens.append([self.caracter, self.linha, self.coluna, "Fim de Bloco"])
         self.caracter = self.arquivo_fonte.read(1)
         self.coluna += 1

@@ -1,10 +1,8 @@
 import copy
 
 # atributos dos tokens
-token = 0
-linha = 1
-coluna = 2
-tipo = 3
+token, linha, coluna, tipo = 0, 1, 2, 3
+C, D = [], []
 
 
 class MaqHipo:
@@ -27,9 +25,12 @@ class MaqHipo:
     def __init__(self, tokens_de_entrada):
         self.tokens = tokens_de_entrada
         self.escopo.append(['0', 'livre'])
-
+        linha = ['cadeia', ['escopo'], 'categoria e tipo', 'end_rel', 'prim_instr']
+        self.tabela.append(copy.deepcopy(linha))
         if (self.programa()):
             print("\n########MAQHIPO COM SUCESSO!!!##########\n")
+            for x in range(len(self.tabela)):
+                print(x, self.tabela[x])
         else:
             print("\n########ERRO NA MAQHIPO########")
             print(self.pilha[-1])
