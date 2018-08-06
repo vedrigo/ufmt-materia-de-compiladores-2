@@ -730,12 +730,18 @@ class MaqHipo:
         elif (self.token[tipo] == "Numero inteiro"):
             self.pilha += ['erro ao comparar o token:' + str(self.token)]
             if (self.comparar([self.token[token], self.escopo, 'integer', self.token[token]])):
+                #<hipo>
+                D.append(self.token[token])
+                #</hipo>
                 self.pilha.pop()
                 return True
 
         elif (self.token[tipo] == "Numero de ponto flutuante"):
             self.pilha += ['erro ao comparar o token:' + str(self.token)]
             if (self.comparar([self.token[token], self.escopo, 'real', self.token[token]])):
+                #<hipo>
+                D.append(self.token[token])
+                #</hipo>
                 self.pilha.pop()
                 return True
 
