@@ -2,7 +2,16 @@ import copy
 
 # atributos dos tokens
 token, linha, coluna, tipo = 0, 1, 2, 3
+# pilhas para a maqhipo
 C, D = [], []
+
+
+class Parametro:
+
+    def __init__(self, booleano=False, herdado=[], retorno=[]):
+        self.herdado = herdado
+        self.booleano = booleano
+        self.retorno = retorno
 
 
 class MaqHipo:
@@ -20,23 +29,31 @@ class MaqHipo:
     sinaliza_procedimento = None
     sequencia_parametros = []
     ultimo_token_buscado = []
-    tabela_hipo = []
+    codigo_inter = []
+    end_rel = 0
+    prim_instr = 0
+    posicoesDesviosProc = []
 
     def __init__(self, tokens_de_entrada):
+        par = Parametro()
         self.tokens = tokens_de_entrada
         self.escopo.append(['0', 'livre'])
-        linha = ['cadeia', ['escopo'], 'categoria e tipo', 'end_rel', 'prim_instr']
+        linha = ['nome', ['escopo'], 'categoria/tipo', 'end_rel', 'prim_instr']
         self.tabela.append(copy.deepcopy(linha))
-        if (self.programa()):
+        if (self.programa(par)):
             print("\n########MAQHIPO COM SUCESSO!!!##########\n")
             for x in range(len(self.tabela)):
-                print(x, self.tabela[x])
+                print(x, "\t:",self.tabela[x][0], "\t", self.tabela[x][3])
+            print("\n\n")
+            for x in range(len(self.codigo_inter)):
+                print(x, "\t:",self.codigo_inter[x])
+
         else:
             print("\n########ERRO NA MAQHIPO########")
             print(self.pilha[-1])
             print(self.msg)
 
-    def programa(self):
+    def programa(self, par):
         self.nextToken()
 
         if (self.token[token] == "program"):
@@ -46,13 +63,15 @@ class MaqHipo:
 
             if (self.token[tipo] == "Identificador"):
                 self.pilha += ['Erro ao inserir o token: ' + str(self.token)]
-                if(self.inserir([self.token[token], self.escopo, 'program', ''], True)):
+                if(self.inserir([self.token[token], self.escopo, 'program', '', ''], True)):
+                    self.codigo_inter.append("INPP")
                     self.pilha.pop()
                     self.nextToken()
-                    if (self.corpo()):
+                    if (self.corpo(par)):
                         self.nextToken()
 
                         if (self.token[token] == '.'):
+                            self.codigo_inter.append("PARA")
                             self.escopo.pop()
                             return True
 
@@ -129,10 +148,13 @@ class MaqHipo:
     def aplicarTipo(self, tipo):
         for x in self.pilha_execucao:
             x[2] = tipo
+            x[3] = self.end_rel
             if(not self.inserir(x, True)):
                 self.pilha += ['erro ao inserir os tokens da linha: ' + str(self.token[linha])]
                 self.msg += '\nerro em aplicarTipo'
                 return False
+            self.end_rel += 1
+            self.codigo_inter.append("ALME 1")
         self.pilha_execucao.clear()
         return True
 
@@ -155,17 +177,19 @@ class MaqHipo:
         self.linhaToken -= 1
         self.token = self.tokens[self.linhaToken]
 
-    def corpo(self):
+    def corpo(self, par):
 
-        if (self.dc()):
+        if (self.dc(par)):
             self.nextToken()
 
             if (self.token[token] == "begin"):
                 self.nextToken()
                 self.semente += 1
                 self.escopo.append([self.semente, 'livre'])
+                for x in self.posicoesDesviosProc:
+                    self.codigo_inter[x] = "DSVI" + str(len(self.codigo_inter))
 
-                if (self.comandos()):
+                if (self.comandos(par)):
                     self.escopo.pop()
                     self.nextToken()
 
@@ -174,27 +198,27 @@ class MaqHipo:
 
         return False
 
-    def dc(self):
-        dc_v = self.dc_v()
+    def dc(self, par):
+        dc_v = self.dc_v(par)
         if (dc_v or dc_v == 'Deu ruim'):
             if (dc_v == 'Deu ruim'):
                 return False
             else:
                 self.nextToken()
-                if (self.mais_dc()):
+                if (self.mais_dc(par)):
                     return True
 
                 return False
 
         elif (not dc_v):
-            dc_p = self.dc_p()
+            dc_p = self.dc_p(par)
             if (dc_p or dc_p == 'Deu ruim'):
 
                 if (dc_p == 'Deu ruim'):
                     return False
                 else:
                     self.nextToken()
-                    if (self.mais_dc()):
+                    if (self.mais_dc(par)):
                         return True
 
                     return False
@@ -203,11 +227,11 @@ class MaqHipo:
                 self.prevToken()
                 return True
 
-    def mais_dc(self):
+    def mais_dc(self, par):
 
         if (self.token[token] == ';'):
             self.nextToken()
-            if (self.dc()):
+            if (self.dc(par)):
                 return True
             return False
 
@@ -215,27 +239,27 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def dc_v(self):
+    def dc_v(self, par):
 
         if (self.token[token] == "var"):
             self.pilha_execucao.clear()
             self.nextToken()
 
             self.sinaliza_inserir = True
-            if (self.variaveis()):
+            if (self.variaveis(par)):
                 self.sinaliza_inserir = False
                 self.nextToken()
 
                 if (self.token[token] == ':'):
                     self.nextToken()
 
-                    if (self.tipo_var()):
+                    if (self.tipo_var(par)):
                         return True
             return 'Deu ruim'
 
         return False
 
-    def tipo_var(self):
+    def tipo_var(self, par):
 
         if (self.token[token] == "real"):
             if(self.aplicarTipo('real')):
@@ -247,28 +271,36 @@ class MaqHipo:
 
         return False
 
-    def variaveis(self):
+    def variaveis(self, par):
 
         if (self.token[tipo] == "Identificador"):
             if (self.sinaliza_inserir):
+                #print('Iniciado inserir em: variaveis > ident')
                 self.pilha += ['erro ao inserir o token: ' + str(self.token)]
-                if(self.inserir([self.token[token], self.escopo, 'ident', ''], False)):
+                if(self.inserir([self.token[token], self.escopo, 'ident', '', ''], False)):
                     self.pilha.pop()
+                    #print('Terminado inserir em: variaveis > ident\n')
                     self.nextToken()
-                    if (self.mais_var()):
+                    if (self.mais_var(par)):
                         return True
-            else:
+            elif(self.buscar([self.token[token], self.escopo, 'ident', ''])):
+                if(par.herdado == "c_read"):
+                    par.retorno.append(self.ultimo_token_buscado)
+                elif(par.herdado == "c_write"):
+                    par.retorno.append(self.ultimo_token_buscado)
                 self.nextToken()
-                if (self.mais_var()):
+                if (self.mais_var(par)):
                     return True
+            else:
+                exit('\nErro na linha ' + str(self.token[linha]) + '. Variavel ' + str(self.token[token]) + ' não existe.')
 
         return False
 
-    def mais_var(self):
+    def mais_var(self, par):
         if (self.token[token] == ','):
             self.nextToken()
 
-            if (self.variaveis()):
+            if (self.variaveis(par)):
                 return True
             return False
 
@@ -276,37 +308,40 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def dc_p(self):
+    def dc_p(self, par):
 
         if (self.token[token] == "procedure"):
             self.nextToken()
 
             if (self.token[tipo] == "Identificador"):
                 self.pilha += ['erro ao inserir o token:' + str(self.token)]
-                if(self.inserir([self.token[token], self.escopo, 'procedure', ''], True)):
+                if(self.inserir([self.token[token], self.escopo, 'procedure', '', ''], True)):
                     self.pilha.pop()
 
                     self.semente += 1
                     self.escopo.append([self.semente, 'estrito'])
                     self.sinaliza_procedimento = self.token[token]
+                    posDesvio = str(len(self.codigo_inter))
+                    self.posicoesDesviosProc.append(posDesvio)
+                    self.codigo_inter.append("DSVI ")
                     self.nextToken()
 
-                    if (self.parametros()):
+                    if (self.parametros(par)):
                         self.nextToken()
                         self.sinaliza_procedimento = None
-                        if (self.corpo()):
+                        if (self.corpo(par)):
                             self.escopo.pop()
                             return True
             return 'Deu ruim'
 
         return False
 
-    def parametros(self):
+    def parametros(self, par):
 
         if (self.token[token] == '('):
             self.nextToken()
 
-            if (self.lista_par()):
+            if (self.lista_par(par)):
                 self.nextToken()
 
                 if (self.token[token] == ')'):
@@ -318,30 +353,30 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def lista_par(self):
+    def lista_par(self, par):
 
         self.sinaliza_inserir = True
-        if (self.variaveis()):
+        if (self.variaveis(par)):
             self.sinaliza_inserir = False
             self.nextToken()
 
             if (self.token[token] == ':'):
                 self.nextToken()
 
-                if (self.tipo_var()):
+                if (self.tipo_var(par)):
                     self.nextToken()
 
-                    if (self.mais_par()):
+                    if (self.mais_par(par)):
                         return True
 
         return False
 
-    def mais_par(self):
+    def mais_par(self, par):
 
         if (self.token[token] == ';'):
             self.nextToken()
 
-            if (self.lista_par()):
+            if (self.lista_par(par)):
                 return True
 
             return False
@@ -350,15 +385,15 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def corpo_p(self):
+    def corpo_p(self, par):
 
-        if (self.dc_loc()):
+        if (self.dc_loc(par)):
             self.nextToken()
 
             if (self.token[token] == "begin"):
                 self.nextToken()
 
-                if (self.comandos()):
+                if (self.comandos(par)):
                     self.nextToken()
 
                     if (self.token[token] == "end"):
@@ -366,9 +401,9 @@ class MaqHipo:
 
         return False
 
-    def dc_loc(self):
+    def dc_loc(self, par):
 
-        if (self.dc_v()):
+        if (self.dc_v(par)):
             self.nextToken()
 
             if (self.mais_dcloc()):
@@ -379,12 +414,12 @@ class MaqHipo:
         elif (' '):
             return True
 
-    def mais_dcloc(self):
+    def mais_dcloc(self, par):
 
         if (self.token[token] == ';'):
             self.nextToken()
 
-            if (self.dc_loc()):
+            if (self.dc_loc(par)):
                 return True
 
             return False
@@ -393,7 +428,7 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def lista_arg(self):
+    def lista_arg(self, par):
 
         if (self.token[token] == '('):
             self.nextToken()
@@ -402,7 +437,7 @@ class MaqHipo:
                 self.sequencia_parametros = self.ultimo_token_buscado[2].split(',')
                 self.sequencia_parametros.pop(0)
 
-            if (self.argumentos()):
+            if (self.argumentos(par)):
                 self.nextToken()
                 self.sequencia_parametros.clear
 
@@ -415,7 +450,7 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def argumentos(self):
+    def argumentos(self, par):
 
         if(self.sequencia_parametros != []):
             if (self.token[tipo] == 'Identificador'):
@@ -425,7 +460,7 @@ class MaqHipo:
                     self.pilha.pop()
                     if(self.ultimo_token_buscado[2] == self.sequencia_parametros.pop(0)):
                         self.nextToken()
-                        if (self.mais_ident()):
+                        if (self.mais_ident(par)):
                             return True
             exit('Erro na linha ' + str(self.token[1]) + ' Parametro do procedimento incorreto')
 
@@ -436,12 +471,12 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def mais_ident(self):
+    def mais_ident(self, par):
 
         if (self.token[token] == ';'):
             self.nextToken()
 
-            if (self.argumentos()):
+            if (self.argumentos(par)):
                 return True
 
             return False
@@ -451,35 +486,39 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def pfalsa(self):
+    def pfalsa(self, par, posDesvio = "Nulo"):
 
         if (self.token[token] == "else"):
             self.nextToken()
-
-            if (self.comandos()):
+            posDesvio2 = len(self.codigo_inter)
+            self.codigo_inter.append("DSVI ")
+            self.codigo_inter[posDesvio] = "DSVF " + str(len(self.codigo_inter))
+            if (self.comandos(par)):
+                self.codigo_inter[posDesvio2] = "DSVI " + str(len(self.codigo_inter))
                 return True
             return False
 
         elif (' '):
             self.prevToken()
+            self.codigo_inter[posDesvio] = "DSVF " + str(len(self.codigo_inter))
             return True
 
-    def comandos(self):
+    def comandos(self, par):
 
-        if (self.comando()):
+        if (self.comando(par)):
             self.nextToken()
 
-            if (self.mais_comandos()):
+            if (self.mais_comandos(par)):
                 return True
 
         return False
 
-    def mais_comandos(self):
+    def mais_comandos(self, par):
 
         if (self.token[token] == ';'):
             self.nextToken()
 
-            if (self.comandos()):
+            if (self.comandos(par)):
                 return True
 
             return False
@@ -488,15 +527,21 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def comando(self):
+    def comando(self, par):
         self.sinaliza_tipo = False
         if (self.token[token] == "read"):
             self.nextToken()
 
             if (self.token[token] == "("):
                 self.nextToken()
-
-                if (self.variaveis()):
+                par.herdado = "c_read"
+                par.retorno = []
+                if (self.variaveis(par)):
+                    par.herdado = ""
+                    for x in range(len(par.retorno)):
+                        self.codigo_inter.append("LEIT")
+                        y = str(par.retorno[x][3])
+                        self.codigo_inter.append("ARMZ " + y)
                     self.nextToken()
 
                     if (self.token[token] == ")"):
@@ -507,8 +552,14 @@ class MaqHipo:
 
             if (self.token[token] == "("):
                 self.nextToken()
-
-                if (self.variaveis()):
+                par.herdado = "c_write"
+                par.retorno = []
+                if (self.variaveis(par)):
+                    par.herdado = ""
+                    for x in range(len(par.retorno)):
+                        y = str(par.retorno[x][3])
+                        self.codigo_inter.append("CRVL " + y)
+                        self.codigo_inter.append("IMPR")
                     self.nextToken()
 
                     if (self.token[token] == ")"):
@@ -518,18 +569,22 @@ class MaqHipo:
             self.semente += 1
             self.escopo.append([self.semente, 'livre'])
             self.nextToken()
-
-            if (self.condicao()):
+            posInicioWhile = len(self.codigo_inter)
+            if (self.condicao(par)):
                 self.nextToken()
 
                 if (self.token[token] == "do"):
+                    posDesvio = len(self.codigo_inter)
+                    self.codigo_inter.append("DSVF ")
                     self.nextToken()
 
-                    if (self.comandos()):
+                    if (self.comandos(par)):
                         self.nextToken()
 
                         if (self.token[token] == '$'):
                             self.escopo.pop()
+                            self.codigo_inter.append("DSVI " + str(posInicioWhile))
+                            self.codigo_inter[posDesvio] = "DSVF " + str(len(self.codigo_inter))
                             return True
 
         elif (self.token[token] == "if"):
@@ -537,16 +592,18 @@ class MaqHipo:
             self.escopo.append([self.semente, 'livre'])
             self.nextToken()
 
-            if (self.condicao()):
+            if (self.condicao(par)):
+                posDesvio = len(self.codigo_inter)
+                self.codigo_inter.append("DSVF ")
                 self.nextToken()
 
                 if (self.token[token] == "then"):
                     self.nextToken()
 
-                    if (self.comando()):
+                    if (self.comando(par)):
                         self.nextToken()
 
-                        if (self.pfalsa()):
+                        if (self.pfalsa(par, posDesvio)):
                             self.nextToken()
 
                             if (self.token[token] == '$'):
@@ -575,70 +632,78 @@ class MaqHipo:
                                 return True
                 else:
                     self.nextToken()
-                    if (self.restoident()):
+                    if (self.restoident(par)):
                         return True
 
         return False
 
-    def restoident(self):
+    def restoident(self, par):
 
         if (self.token[token] == ":="):
+            self.buscar([self.token[token], self.escopo, 'ident', ''])
             self.nextToken()
 
-            if (self.expressao()):
+            if (self.expressao(par)):
+                self.codigo_inter.append("ARMZ " + str(self.ultimo_token_buscado[3]))
                 return True
 
-        elif (self.lista_arg()):
+        elif (self.lista_arg(par)):
             return True
 
         return False
 
-    def condicao(self):
+    def condicao(self, par):
 
-        if (self.expressao()):
+        if (self.expressao(par)):
             self.nextToken()
 
-            if (self.relacao()):
+            if (self.relacao(par)):
                 self.nextToken()
 
-                if (self.expressao()):
+                if (self.expressao(par)):
                     return True
 
         return False
 
-    def relacao(self):
+    def relacao(self, par):
 
         if (self.token[token] == '='):
+            par.retorno = "CPIG"
             return True
 
         elif (self.token[token] == "<>"):
+            par.retorno = "CDES"
             return True
 
         elif (self.token[token] == ">="):
+            par.retorno = "CMAI"
             return True
 
         elif (self.token[token] == "<="):
+            par.retorno = "CPMI"
             return True
 
         elif (self.token[token] == '>'):
+            par.retorno = "CPMA"
             return True
 
         elif (self.token[token] == '<'):
+            par.retorno = "CPME"
             return True
 
         return False
 
-    def expressao(self):
+    def expressao(self, par):
 
-        if (self.termo()):
+        if (self.termo(par)):
             self.nextToken()
 
-            if (self.outros_termos()):
+            if (self.outros_termos(par)):
                 return True
 
         return False
 
-    def op_un(self):
+    def op_un(self, par):
 
         if (self.token[token] == '+'):
             return True
@@ -650,14 +715,19 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def outros_termos(self):
+    def outros_termos(self, par):
 
-        if (self.op_ad()):
+        if (self.op_ad(par)):
+            op = self.token[0]
             self.nextToken()
 
-            if (self.termo()):
+            if (self.termo(par)):
+                if(op == "+"):
+                    self.codigo_inter.append("SOMA")
+                elif(op == "-"):
+                    self.codigo_inter.append("SUBT")
                 self.nextToken()
-                if (self.outros_termos()):
+                if (self.outros_termos(par)):
                     return True
 
             return False
@@ -666,7 +736,7 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def op_ad(self):
+    def op_ad(self, par):
 
         if (self.token[token] == '+'):
             return True
@@ -676,28 +746,35 @@ class MaqHipo:
 
         return False
 
-    def termo(self):
-
-        if (self.op_un()):
+    def termo(self, par):
+        if (self.op_un(par)):
+            op = self.token[0]
             self.nextToken()
 
-            if (self.fator()):
+            if (self.fator(par)):
+                if(op == "-"):
+                    self.codigo_inter.append("INVE")
                 self.nextToken()
 
-                if (self.mais_fatores()):
+                if (self.mais_fatores(par)):
                     return True
 
         return False
 
-    def mais_fatores(self):
+    def mais_fatores(self, par):
 
-        if (self.op_mul()):
+        if (self.op_mul(par)):
+            op = self.token[0]
             self.nextToken()
 
-            if (self.fator()):
+            if (self.fator(par)):
+                if(op == "*"):
+                    self.codigo_inter.append("MULT")
+                elif(op == "/"):
+                    self.codigo_inter.append("DIVI")
                 self.nextToken()
 
-                if (self.mais_fatores()):
+                if (self.mais_fatores(par)):
                     return True
             return False
 
@@ -705,7 +782,7 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def op_mul(self):
+    def op_mul(self, par):
 
         if (self.token[token] == '*'):
             return True
@@ -715,12 +792,13 @@ class MaqHipo:
 
         return False
 
-    def fator(self):
+    def fator(self, par):
 
         if (self.token[tipo] == "Identificador"):
             self.pilha += ['erro ao buscar o token:' + str(self.token)]
             self.msg = 'Token ' + str(self.token[token]) + ' ainda não foi declarado!'
             if(self.buscar([self.token[token], self.escopo, 'ident', ''])):
+                self.codigo_inter.append("CRVL " + str(self.ultimo_token_buscado[0]))
                 self.pilha.pop()
                 self.pilha += ['erro ao comparar o token:' + str(self.token)]
                 if(self.comparar(self.ultimo_token_buscado)):
@@ -730,18 +808,14 @@ class MaqHipo:
         elif (self.token[tipo] == "Numero inteiro"):
             self.pilha += ['erro ao comparar o token:' + str(self.token)]
             if (self.comparar([self.token[token], self.escopo, 'integer', self.token[token]])):
-                #<hipo>
-                D.append(self.token[token])
-                #</hipo>
+                self.codigo_inter.append("CRCT " + str(self.token[0]))
                 self.pilha.pop()
                 return True
 
         elif (self.token[tipo] == "Numero de ponto flutuante"):
             self.pilha += ['erro ao comparar o token:' + str(self.token)]
             if (self.comparar([self.token[token], self.escopo, 'real', self.token[token]])):
-                #<hipo>
-                D.append(self.token[token])
-                #</hipo>
+                self.codigo_inter.append("CRCT " + str(self.token[0]))
                 self.pilha.pop()
                 return True
 

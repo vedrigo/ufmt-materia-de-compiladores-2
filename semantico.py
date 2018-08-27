@@ -316,6 +316,7 @@ class Semantico:
                     if (self.mais_var()):
                         return True
             elif(self.buscar([self.token[token], self.escopo, 'ident', ''])):
+                ##par.retorno.append([self.token[token], self.escopo, 'ident', '', ''])
                 self.nextToken()
                 if (self.mais_var()):
                     return True

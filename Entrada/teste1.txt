@@ -15,8 +15,12 @@ program id1
         id2(b; b; a);
         if 1 <> c then
             a := 3.0
+        else
+            a := 3.0/2.0
         $;
         write(a, b, c);
-        read(b)
+        read(b, a);
+        a := -a
+
     end
 .
