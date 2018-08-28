@@ -155,17 +155,16 @@ class Lexico(object):
                 token += self.caracter
                 self.caracter = self.arquivo_fonte.read(1)
                 self.coluna += 1
-                if self.caracter == '\n':
-                    self.q8()
-                elif self.caracter == '*':
+                if re.match("[/*]", self.caracter) is not None:
                     token += self.caracter
-                    self.caracter = self.arquivo_fonte.read(1)
                     self.coluna += 1
-                    if self.caracter == '/':
+                    if re.match("\/", self.caracter) is not None:
                         token += self.caracter
                         self.caracter = self.arquivo_fonte.read(1)
                         self.coluna += 1
                         break
+                elif self.caracter == '\n':
+                    self.q8()
                 elif self.caracter == '':
                     self.error('Esperado o simbolo */ de fechamento de comentário')
             self.lista_de_tokens.append([token, self.linha, self.coluna, "Comentário"])

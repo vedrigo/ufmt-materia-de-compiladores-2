@@ -9,7 +9,7 @@ os.system('cls' if os.name == 'nt' else 'clear')
 if(len(sys.argv) > 1):
     tokens = Lexico(str(sys.argv[1])).lista_de_tokens
 else:
-    tokens = Lexico('Entrada/teste1.txt').lista_de_tokens
+    tokens = Lexico('Entrada/Ex2.txt').lista_de_tokens
 
 if (Sintatico(tokens).resultado):
     if(Semantico(tokens).resultado):

@@ -33,6 +33,7 @@ class MaqHipo:
     end_rel = 0
     prim_instr = 0
     posicoesDesviosProc = []
+    endereco = 0
 
     def __init__(self, tokens_de_entrada):
         par = Parametro()
@@ -43,10 +44,10 @@ class MaqHipo:
         if (self.programa(par)):
             print("\n########MAQHIPO COM SUCESSO!!!##########\n")
             for x in range(len(self.tabela)):
-                print(x, "\t:",self.tabela[x][0], "\t", self.tabela[x][3])
+                print(x, "\t:", self.tabela[x][0], "\t", self.tabela[x][3])
             print("\n\n")
             for x in range(len(self.codigo_inter)):
-                print(x, "\t:",self.codigo_inter[x])
+                print(x, "\t:", self.codigo_inter[x])
 
         else:
             print("\n########ERRO NA MAQHIPO########")
@@ -153,8 +154,11 @@ class MaqHipo:
                 self.pilha += ['erro ao inserir os tokens da linha: ' + str(self.token[linha])]
                 self.msg += '\nerro em aplicarTipo'
                 return False
+            if(self.sinaliza_inserir is True):
+                self.endereco += 1
+                self.codigo_inter.append("ALME 1")
             self.end_rel += 1
-            self.codigo_inter.append("ALME 1")
+
         self.pilha_execucao.clear()
         return True
 
@@ -247,13 +251,13 @@ class MaqHipo:
 
             self.sinaliza_inserir = True
             if (self.variaveis(par)):
-                self.sinaliza_inserir = False
                 self.nextToken()
 
                 if (self.token[token] == ':'):
                     self.nextToken()
 
                     if (self.tipo_var(par)):
+                        self.sinaliza_inserir = False
                         return True
             return 'Deu ruim'
 
@@ -327,6 +331,7 @@ class MaqHipo:
                     self.codigo_inter.append("DSVI ")
                     self.tabela[-1][4] = str(len(self.codigo_inter))
                     self.nextToken()
+                    endVar = self.endereco + 1
 
                     if (self.parametros(par)):
                         self.nextToken()
@@ -338,6 +343,7 @@ class MaqHipo:
                                     desalocar += 1
                             self.codigo_inter.append("DESM " + str(desalocar))
                             self.codigo_inter.append("RTPR")
+                            self.endereco = endVar
                             self.escopo.pop()
                             return True
             return 'Deu ruim'
@@ -500,7 +506,7 @@ class MaqHipo:
             self.prevToken()
             return True
 
-    def pfalsa(self, par, posDesvio = "Nulo"):
+    def pfalsa(self, par, posDesvio="Nulo"):
 
         if (self.token[token] == "else"):
             self.nextToken()
@@ -637,7 +643,7 @@ class MaqHipo:
                         self.pilha.pop()
                         self.nextToken()
                         self.pilha += ['parâmetros não passados']
-                        if (self.argumentos()):
+                        if (self.argumentos(par)):
                             self.pilha.pop()
                             self.nextToken()
                             self.pilha += ['Esperado: )\nEncontrado: ' + str(self.token)]
@@ -812,7 +818,7 @@ class MaqHipo:
             self.pilha += ['erro ao buscar o token:' + str(self.token)]
             self.msg = 'Token ' + str(self.token[token]) + ' ainda não foi declarado!'
             if(self.buscar([self.token[token], self.escopo, 'ident', ''])):
-                self.codigo_inter.append("CRVL " + str(self.ultimo_token_buscado[0]))
+                self.codigo_inter.append("CRVL " + str(self.ultimo_token_buscado[3]))
                 self.pilha.pop()
                 self.pilha += ['erro ao comparar o token:' + str(self.token)]
                 if(self.comparar(self.ultimo_token_buscado)):
@@ -836,7 +842,7 @@ class MaqHipo:
         elif (self.token[token] == '('):
             self.nextToken()
 
-            if (self.expressao()):
+            if (self.expressao(par)):
                 self.nextToken()
 
                 if (self.token[token] == ')'):
