@@ -187,7 +187,7 @@ class MaqHipo:
                 self.semente += 1
                 self.escopo.append([self.semente, 'livre'])
                 for x in self.posicoesDesviosProc:
-                    self.codigo_inter[x] = "DSVI" + str(len(self.codigo_inter))
+                    self.codigo_inter[x] = "DSVI " + str(len(self.codigo_inter))
 
                 if (self.comandos(par)):
                     self.escopo.pop()
@@ -316,20 +316,28 @@ class MaqHipo:
             if (self.token[tipo] == "Identificador"):
                 self.pilha += ['erro ao inserir o token:' + str(self.token)]
                 if(self.inserir([self.token[token], self.escopo, 'procedure', '', ''], True)):
+                    escopoBackup = self.escopo
                     self.pilha.pop()
 
                     self.semente += 1
                     self.escopo.append([self.semente, 'estrito'])
                     self.sinaliza_procedimento = self.token[token]
-                    posDesvio = str(len(self.codigo_inter))
+                    posDesvio = len(self.codigo_inter)
                     self.posicoesDesviosProc.append(posDesvio)
                     self.codigo_inter.append("DSVI ")
+                    self.tabela[-1][4] = str(len(self.codigo_inter))
                     self.nextToken()
 
                     if (self.parametros(par)):
                         self.nextToken()
                         self.sinaliza_procedimento = None
                         if (self.corpo(par)):
+                            desalocar = 0
+                            for x in self.tabela:
+                                if escopoBackup == x[1]:
+                                    desalocar += 1
+                            self.codigo_inter.append("DESM " + str(desalocar))
+                            self.codigo_inter.append("RTPR")
                             self.escopo.pop()
                             return True
             return 'Deu ruim'
@@ -436,10 +444,13 @@ class MaqHipo:
             if (self.ultimo_token_buscado[2].startswith('procedure')):
                 self.sequencia_parametros = self.ultimo_token_buscado[2].split(',')
                 self.sequencia_parametros.pop(0)
+                self.codigo_inter.append("PUSHER " + str(len(self.codigo_inter) + len(self.sequencia_parametros) + 2))
+                instr = self.ultimo_token_buscado[4]
 
             if (self.argumentos(par)):
                 self.nextToken()
-                self.sequencia_parametros.clear
+                self.sequencia_parametros.clear()
+                self.codigo_inter.append("CHPR " + str(instr))
 
                 if (self.token[token] == ')'):
                     return True
@@ -447,6 +458,8 @@ class MaqHipo:
             return False
 
         elif (' '):
+            self.codigo_inter.append("PUSHER " + str(len(self.codigo_inter) + 2))
+            self.codigo_inter.append("CHPR " + str(instr))
             self.prevToken()
             return True
 
@@ -459,6 +472,7 @@ class MaqHipo:
                 if(self.buscar([self.token[token], self.escopo, 'ident', ''])):
                     self.pilha.pop()
                     if(self.ultimo_token_buscado[2] == self.sequencia_parametros.pop(0)):
+                        self.codigo_inter.append("PARAM " + str(self.ultimo_token_buscado[3]))
                         self.nextToken()
                         if (self.mais_ident(par)):
                             return True
