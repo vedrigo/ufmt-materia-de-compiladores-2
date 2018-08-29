@@ -34,25 +34,30 @@ class MaqHipo:
     prim_instr = 0
     posicoesDesviosProc = []
     endereco = 0
+    resultado = False
 
     def __init__(self, tokens_de_entrada):
         par = Parametro()
         self.tokens = tokens_de_entrada
         self.escopo.append(['0', 'livre'])
-        linha = ['nome', ['escopo'], 'categoria/tipo', 'end_rel', 'prim_instr']
+        linha = ['NOME', ['escopo'], 'categoria/tipo', 'D', 'C']
         self.tabela.append(copy.deepcopy(linha))
         if (self.programa(par)):
             print("\n########MAQHIPO COM SUCESSO!!!##########\n")
+            print("Tabela de Simbolos:")
             for x in range(len(self.tabela)):
-                print(x, "\t:", self.tabela[x][0], "\t", self.tabela[x][3])
-            print("\n\n")
+                print(x, "\t:", self.tabela[x][0], "\t", self.tabela[x][3], "\t", self.tabela[x][4])
+            print("\n")
+            print("Código Intermediário:")
             for x in range(len(self.codigo_inter)):
                 print(x, "\t:", self.codigo_inter[x])
+            self.resultado = True
 
         else:
             print("\n########ERRO NA MAQHIPO########")
             print(self.pilha[-1])
             print(self.msg)
+            self.resultado = False
 
     def programa(self, par):
         self.nextToken()

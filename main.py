@@ -2,6 +2,7 @@ from sintatico import Sintatico
 from lexico import Lexico
 from semantico import Semantico
 from maqhipo import MaqHipo
+from interpretador import Interpretador
 import os
 import sys
 
@@ -13,4 +14,6 @@ else:
 
 if (Sintatico(tokens).resultado):
     if(Semantico(tokens).resultado):
-        MaqHipo(tokens)
+        maqHipo = MaqHipo(tokens)
+        if(maqHipo.resultado):
+            Interpretador(maqHipo.codigo_inter)

@@ -159,7 +159,6 @@ class Lexico(object):
                     token += self.caracter
                     self.coluna += 1
                     if re.match("\/", self.caracter) is not None:
-                        token += self.caracter
                         self.caracter = self.arquivo_fonte.read(1)
                         self.coluna += 1
                         break
