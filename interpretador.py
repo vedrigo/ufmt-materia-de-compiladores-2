@@ -1,3 +1,7 @@
+from copy import copy
+from debug import debug
+
+
 class Interpretador:
 
     def __init__(self, codigo_inter):
@@ -6,9 +10,12 @@ class Interpretador:
         self.executar()
 
     def executar(self):
-        self.codigo_inter.reverse()
-        for i in range(len(self.codigo_inter)):
-            instr = self.codigo_inter.pop()
+
+        i = 0
+        debug("\nSequencia de Intruções:")
+        while i < len(self.codigo_inter):
+            instr = self.codigo_inter[i]
+            debug(instr)
             if("CRCT" in instr):
                 #carrega constante k no topo da pilha D
                 self.pilha.append(float(instr.split(" ")[1])) 
@@ -64,51 +71,56 @@ class Interpretador:
                 self.pilha.append(1 if self.pilha.pop() >= topo else 0)
             elif("ARMZ" in instr):
                 #armazena o topo da pilha no endereço n de D
-                pass
+                self.pilha[int(instr.split(" ")[1])] = self.pilha.pop()
             elif("DSVI" in instr):
                 #desvio incondicional para a instrução de endereço p
-                pass
+                i = int(instr.split(" ")[1])
+                continue
             elif("DSVF" in instr):
                 #{desvio condicional para a instrução de endereço p; 
                 # o desvio será executado caso a condição resultante 
                 # seja falsa; o valor dacondição estará no topo
-                pass
+                if self.pilha.pop() == 0:
+                    i = int(instr.split(" ")[1])
+                    continue
             elif("LEIT" in instr):
                 #lê um dado de entrada para o topo da pilha
-                pass
+                self.pilha.append(float(input("Entre com um valor: ")))
             elif("IMPR" in instr):
                 #imprime valor o valor do topo da pilha na saída
-                pass
+                print("Saída: ", self.pilha.pop())
             elif("ALME" in instr):
                 #reserva m posições na pilha D; m depende do tipo da variável
-                pass
+                for j in range(0, int(instr.split(" ")[1])):
+                    self.pilha.append("ReservaDeMemmoria")
             elif("PARAM" in instr):
                 #aloca memória e copia valor da posição n para o topo de D
-                pass
+                self.pilha.append(copy(self.pilha[int(instr.split(" ")[1])]))
             elif("PUSHER" in instr):
                 #empilha o índice e da instrução seguinte à chamada do 
                 #procedimento, como endereço de retorno, no array C
-                pass
+                self.pilha.append(instr.split(" ")[1])
             elif("CHPR" in instr):
                 #desvia para instrução de índice p no array C, obtido na TS
-                pass
+                i = int(instr.split(" ")[1])
+                continue
             elif("DESM" in instr):
                 #desaloca m posições de memória, a partir do topo s de D
-                pass
+                for j in range(0, int(instr.split(" ")[1])):
+                    self.pilha.pop()
             elif("RTPR" in instr):
                 #retorna do procedimento – endereço de retorno estará no topo
                 #de D – e desempilha o endereço
-                pass
+                i = int(self.pilha.pop())
+                continue
             elif("INPP" in instr):
                 #inicia programa – será sempre a 1ª instrução
                 pass
             elif("PARA" in instr):
                 #termina a execução do programa
-                pass
+                print("\n########INTERPRETADOR COM SUCESSO!!!##########")
+
+                return True
             else:
                 exit("Erro, comando inesperado!\n Comando: " + instr)
-
-        print("\n########INTERPRETADOR COM SUCESSO!!!##########")
-        print("\nPilha:")
-        for i in range(len(self.pilha)):
-            print(self.pilha[i])
+            i += 1

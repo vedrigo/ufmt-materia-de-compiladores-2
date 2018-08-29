@@ -35,6 +35,7 @@ class MaqHipo:
     posicoesDesviosProc = []
     endereco = 0
     resultado = False
+    pos = 0
 
     def __init__(self, tokens_de_entrada):
         par = Parametro()
@@ -160,7 +161,6 @@ class MaqHipo:
                 self.msg += '\nerro em aplicarTipo'
                 return False
             if(self.sinaliza_inserir is True):
-                self.endereco += 1
                 self.codigo_inter.append("ALME 1")
             self.end_rel += 1
 
@@ -335,8 +335,10 @@ class MaqHipo:
                     self.posicoesDesviosProc.append(posDesvio)
                     self.codigo_inter.append("DSVI ")
                     self.tabela[-1][4] = str(len(self.codigo_inter))
+                    self.tabela[-1][3] = str(self.endereco)
                     self.nextToken()
-                    endVar = self.endereco + 1
+                    self.end_rel += 1
+                    endVar = self.end_rel
 
                     if (self.parametros(par)):
                         self.nextToken()
@@ -348,7 +350,9 @@ class MaqHipo:
                                     desalocar += 1
                             self.codigo_inter.append("DESM " + str(desalocar))
                             self.codigo_inter.append("RTPR")
-                            self.endereco = endVar
+
+                            #exit(str(self.endereco))
+                            self.end_rel = endVar
                             self.escopo.pop()
                             return True
             return 'Deu ruim'
@@ -666,10 +670,10 @@ class MaqHipo:
 
         if (self.token[token] == ":="):
             self.buscar([self.token[token], self.escopo, 'ident', ''])
+            aux = self.ultimo_token_buscado[3]
             self.nextToken()
-
             if (self.expressao(par)):
-                self.codigo_inter.append("ARMZ " + str(self.ultimo_token_buscado[3]))
+                self.codigo_inter.append("ARMZ " + str(aux))
                 return True
 
         elif (self.lista_arg(par)):
